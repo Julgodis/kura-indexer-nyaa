@@ -102,18 +102,17 @@ async fn main() {
         .with_indexer::<NyaaIndexer>(context)
         .with_default_routes();
 
+    #[cfg(feature = "frontend")]
     let builder = if let Some(frontend) = config.frontend {
-        if cfg!(feature = "frontend") {
-            frontend::routes(builder)
-        } else {
-            tracing::warn!(
-                "Frontend feature is not enabled. Please enable the frontend feature in Cargo.toml."
-            );
-            builder
-        }
+        frontend::routes(builder)
     } else {
         builder
     };
+
+    #[cfg(not(feature = "frontend"))]
+    if config.frontend.is_some() {
+        tracing::warn!("Frontend feature is disabled. Ignoring frontend configuration.");
+    }
 
     builder.start().await.expect("Failed to start server");
 }
