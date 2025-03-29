@@ -15,7 +15,7 @@ COPY --from=frontend-install /temp/dev/node_modules node_modules
 COPY frontend/ .
 
 ENV NODE_ENV=production
-ENV VITE_API_URL=
+ENV VITE_API_URL=/
 RUN bun test
 RUN bun run build
 
