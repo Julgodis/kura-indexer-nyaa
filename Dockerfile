@@ -25,7 +25,7 @@ WORKDIR /usr/src/app
 FROM backend-base AS backend-build
 RUN mkdir -p /temp/dev
 COPY Cargo.toml Cargo.lock /temp/dev/
-COPY --from=frontend-release:latest ./dist ./dist
+COPY --from=frontend-release ./dist ./dist
 RUN cd /temp/dev && cargo fetch
 RUN cd /temp/dev && cargo build --release
 
