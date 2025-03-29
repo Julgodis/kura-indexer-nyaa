@@ -1,0 +1,33 @@
+[package]
+name = "kura-indexer-nyaa"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = "0.1.88"
+kura-indexer = { git = "https://github.com/Julgodis/kura-indexer.git", features = ["server"] }
+serde = { version = "1.0.219", features = ["derive"] }
+tokio = { version = "1.44.1", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+uuid = { version = "1.16.0", features = ["v4"] }
+serde_urlencoded = "0.7.1"
+reqwest = { version = "0.12.15", features = ["json"] }
+quick-xml = { version = "0.37.3", features = ["serde", "serialize"] }
+serde-xml-rs = "0.6.0"
+anyhow = "1.0.97"
+chrono = { version = "0.4.40", features = ["serde"] }
+clap = { version = "4.5.34", features = ["derive"] }
+toml = "0.8.20"
+axum = { version = "0.8.1", optional = true, features = ["macros"] }
+humantime-serde = "1.1.1"
+rust-embed = "8.6.0"
+mime_guess = "2.0.5"
+scraper = "0.23.1"
+rusqlite = { version = "0.34.0", features = ["bundled","chrono"] }
+tower-http = { version = "0.6.2", features = ["cors", "trace"] }
+markdown = "=1.0.0-alpha.23"
+
+[features]
+frontend = ["axum"]
+all = ["frontend"]
