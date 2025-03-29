@@ -26,15 +26,15 @@ FROM backend-base AS backend-base-chef
 RUN cargo install cargo-chef
 
 FROM backend-base-chef AS backend-planner
-COPY backend /
+COPY backend .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM backend-base-chef AS backend-cacher
-COPY --from=backend-planner /recipe.json recipe.json
-COPY backend /
+COPY --from=backend-planner /usr/src/app/recipe.json recipe.json
+COPY backend .
 
 FROM backend-base AS backend-build
-COPY backend /
+COPY backend .
 COPY --from=frontend-build /usr/src/app/dist /temp/dev/frontend/dist
 COPY --from=backend-cacher /usr/local/cargo/registry /usr/local/cargo/registry
 COPY --from=backend-cacher /usr/local/cargo/git /usr/local/cargo/git
@@ -48,5 +48,5 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS final
-COPY --from=backend-build /usr/src/app/target/release/kura-indexer-nyaa /kura-indexer-nyaa
+COPY --from=backend-build /usr/src/app/target/release/kura-indexer-nyaa kura-indexer-nyaa
 
