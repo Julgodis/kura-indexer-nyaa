@@ -29,14 +29,11 @@ FROM backend-base-chef AS backend-planner
 COPY backend .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM backend-base-chef AS backend-cacher
-COPY --from=backend-planner /usr/src/app/recipe.json recipe.json
-COPY backend .
-
 FROM backend-base AS backend-build
+COPY --from=backend-planner /usr/src/app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 COPY backend .
 COPY --from=frontend-build /usr/src/app/dist /temp/dev/frontend/dist
-COPY --from=backend-cacher /usr/local/cargo/registry /usr/local/cargo/registry
 RUN cargo build --release
 
 FROM ubuntu:24.04 AS base
