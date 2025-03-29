@@ -33,7 +33,7 @@ FROM backend-base-chef AS backend-build
 COPY --from=backend-planner /usr/src/app/recipe.json recipe.json
 RUN cargo chef cook --release --features all --recipe-path recipe.json
 COPY backend .
-COPY --from=frontend-build /usr/src/app/dist /temp/dev/frontend/dist
+COPY --from=frontend-build /usr/src/app/dist /usr/src/frontend/dist
 RUN cargo build --release --features all
 
 FROM ubuntu:24.04 AS base
