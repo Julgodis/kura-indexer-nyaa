@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { formatDistanceToNow } from 'date-fns'
-import { Torrent, TorrentResponse } from '@/types'
+import { TorrentResponse } from '@/types'
 import Markdown from "react-markdown"
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'

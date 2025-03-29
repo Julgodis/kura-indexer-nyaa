@@ -1,12 +1,10 @@
-import { Footer } from '@/components/layout/footer';
-import { Header } from '@/components/layout/header';
 import { SearchForm } from '@/components/search/search-form';
 import { TorrentPagination } from '@/components/torrent/torrent-pagination';
 import { TorrentTable } from '@/components/torrent/torrent-table';
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { fallback, zodValidator } from '@tanstack/zod-adapter'
+import { zodValidator } from '@tanstack/zod-adapter'
 import { TorrentCategorySchema, TorrentFilterSchema, TorrentListResponseSchema, TorrentSortOrderSchema, TorrentSortSchema } from '@/types';
 
 const torrentParamSchema = z.object({

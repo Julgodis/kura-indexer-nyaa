@@ -1,4 +1,3 @@
-import { Button } from '../ui/button';
 import { Navigation } from './navigation';
 
 export function Header() {

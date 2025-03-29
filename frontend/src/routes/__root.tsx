@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { ThemeProvider } from '@/components/theme-provider'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 

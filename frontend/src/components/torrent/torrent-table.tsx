@@ -1,17 +1,14 @@
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Torrent, TorrentSort, TorrentSortOrder } from '@/types';
-import { useSearch, useNavigate } from '@tanstack/react-router';
+import { Torrent, TorrentSort } from '@/types';
+import { useNavigate } from '@tanstack/react-router';
 import { ArrowUpDown } from 'lucide-react'; // Assuming you use Lucide icons
 import { Route } from '@/routes';
-import { useMemo } from 'react';
 
 interface TorrentTableProps {
   torrents: Torrent[];
 }
 
-function CategoryIcon({ category }: { category: string }) {
-}
 
 function SizeDisplay({ size }: { size: number }) {
   const sizeInMB = size / (1024 * 1024);

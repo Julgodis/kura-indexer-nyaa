@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "../ui/navigation-menu";
+import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, navigationMenuTriggerStyle } from "../ui/navigation-menu";
 
 export function Navigation() {
     return (
@@ -7,8 +7,8 @@ export function Navigation() {
             <NavigationMenuList>
                 <NavigationMenuItem>
                     <NavigationMenuLink className={navigationMenuTriggerStyle()} asChild>
-                        <Link to="/docs">
-                            Documentation
+                        <Link to="/">
+                            Torrents
                         </Link>
                     </NavigationMenuLink>
                 </NavigationMenuItem>
