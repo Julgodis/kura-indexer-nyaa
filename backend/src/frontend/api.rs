@@ -32,7 +32,7 @@ pub async fn torrents_handler(
         request.limit,
     ) {
         (None, category, filter, sort, sort_order, offset, limit) => {
-            tracing::info!("Torrents request: offset: {:?}, limit: {:?}", offset, limit);
+            tracing::debug!("request: offset: {:?}, limit: {:?}", offset, limit);
 
             let response: anyhow::Result<_> = (|| {
                 let db = context.db()?;
@@ -54,7 +54,7 @@ pub async fn torrents_handler(
 
             match response {
                 Ok(response) => {
-                    tracing::info!("Torrents response: {:?}", response);
+                    tracing::trace!("response: {:?}", response);
                     (StatusCode::OK, Json(response)).into_response()
                 }
                 Err(err) => {
@@ -65,7 +65,7 @@ pub async fn torrents_handler(
         }
         (term, category, filter, sort, sort_order, offset, limit) => {
             tracing::info!(
-                "Torrents request: term: {:?}, category: {:?}, filter: {:?}, sort: {:?}, offset: {:?}, limit: {:?}",
+                "request: term: {:?}, category: {:?}, filter: {:?}, sort: {:?}, offset: {:?}, limit: {:?}",
                 term,
                 category,
                 filter,
@@ -121,7 +121,7 @@ pub async fn torrent_handler(
 
     match fetch_view(url).await {
         Ok(response) => {
-            tracing::info!("Torrent response: {:?}", response);
+            tracing::trace!("response: {:?}", response);
             let torrent = TorrentResponse {
                 guid: response.id,
                 title: response.title,
