@@ -77,18 +77,8 @@ impl NyaaPeriodic {
         }
     }
 
-    async fn test_xml_data(_url: Url) -> anyhow::Result<Vec<data::Item>> {
-        let data = include_str!("../target/test.xml");
-        rss::parse(&data)
-    }
-
-    async fn test_html_data(_url: Url) -> anyhow::Result<Vec<data::Item>> {
-        let data = include_str!("../target/list.html");
-        html::parse_list(&data)
-    }
-
     async fn process(context: &NyaaContext, url: Url) -> anyhow::Result<()> {
-        let data = Self::test_html_data(url).await?;
+        let data = Self::fetch_data(url).await?;
         tracing::trace!("fetched data: {:#?}", data);
         tracing::debug!("found {} items", data.len());
 
@@ -97,7 +87,6 @@ impl NyaaPeriodic {
     }
 
     async fn fetch(context: NyaaContext, url: Url) {
-        // Implement periodic fetching logic here
         tracing::info!("fetching data periodically...");
 
         match Self::process(&context, url.clone()).await {
