@@ -37,7 +37,6 @@ FROM backend-base AS backend-build
 COPY backend .
 COPY --from=frontend-build /usr/src/app/dist /temp/dev/frontend/dist
 COPY --from=backend-cacher /usr/local/cargo/registry /usr/local/cargo/registry
-COPY --from=backend-cacher /usr/local/cargo/git /usr/local/cargo/git
 RUN cargo build --release
 
 FROM ubuntu:24.04 AS base
