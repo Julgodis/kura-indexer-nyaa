@@ -25,7 +25,8 @@ WORKDIR /usr/src/app
 FROM backend-base AS backend-build
 RUN mkdir -p /temp/dev
 COPY Cargo.toml Cargo.lock /temp/dev/
-COPY --from=frontend-build ./dist ./dist
+COPY --from=frontend-build /usr/src/app/dist /temp/dev/frontend/dist
+COPY src /temp/dev/src
 RUN cd /temp/dev && cargo fetch
 RUN cd /temp/dev && cargo build --release
 
@@ -38,5 +39,4 @@ RUN apt-get update && apt-get install -y \
 
 FROM base AS final
 COPY --from=backend-build /temp/dev/target/release/kura-indexder-nyaa /usr/src/app/kura-indexder-nyaa
-COPY --from=frontend-build /usr/src/app/dist /usr/src/app/dist
 
