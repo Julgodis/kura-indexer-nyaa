@@ -7,7 +7,6 @@ use crate::{
     data,
     frontend::types::{Torrent, TorrentListResponse, TorrentResponse},
     html,
-    indexer::{NyaaContext},
 };
 
 use super::types::{TorrentListRequest, TorrentRequest};

@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use rust_embed::Embed;
 
 #[derive(Embed)]
-#[folder = "frontend/dist/"]
+#[folder = "../frontend/dist/"]
 pub struct Asset;
 
 pub async fn static_handler(uri: Uri) -> impl IntoResponse {
