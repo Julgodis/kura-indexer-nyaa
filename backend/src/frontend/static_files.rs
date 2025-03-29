@@ -12,10 +12,6 @@ pub struct Asset;
 pub async fn static_handler(uri: Uri) -> impl IntoResponse {
     let mut path = uri.path().trim_start_matches('/').to_string();
 
-    if path.starts_with("dist/") {
-        path = path.replace("dist/", "");
-    }
-
     StaticFile(path)
 }
 
