@@ -21,7 +21,7 @@ pub fn routes(builder: ServerBuilderIndexer<NyaaIndexer>) -> ServerBuilderIndexe
         .route("/index.html", axum::routing::get(index_handler))
         .route("/api/torrents", axum::routing::post(torrents_handler))
         .route("/api/torrent/{id}", axum::routing::get(torrent_handler))
-        .route("/{*file}", axum::routing::get(static_handler));
+        .with_router(|router| router.fallback(axum::routing::get(static_handler)));
 
     if cfg!(debug_assertions) {
         builder.with_router(|router| router.layer(CorsLayer::permissive()))
