@@ -31,7 +31,7 @@ function RouteComponent() {
   const query = useQuery({
     queryKey: ['torrents', search.term, search.category, search.filter, search.sort, search.sort_order, search.offset, search.limit],
     queryFn: async () => {
-      const response = await fetch(`${url}/api/torrents`, {
+      const response = await fetch(`${url}api/torrents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

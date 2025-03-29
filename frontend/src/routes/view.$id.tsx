@@ -43,7 +43,7 @@ const markdownComponents = {
 // API function to fetch torrent data
 async function fetchTorrent(id: string): Promise<TorrentResponse> {
   const url = import.meta.env.VITE_API_URL;
-  const response = await fetch(`${url}/api/torrent/${id}`)
+  const response = await fetch(`${url}api/torrent/${id}`)
   if (!response.ok) {
     throw new Error('Failed to fetch torrent')
   }
