@@ -22,13 +22,23 @@ RUN bun run build
 FROM rust:1.85.0 AS backend-base
 WORKDIR /usr/src/app
 
+FROM backend-base AS backend-base-chef
+RUN cargo install cargo-chef
+
+FROM backend-base-chef AS backend-planner
+COPY backend /
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM backend-base-chef AS backend-cacher
+COPY --from=backend-planner /recipe.json recipe.json
+COPY backend /
+
 FROM backend-base AS backend-build
-RUN mkdir -p /temp/dev
-COPY Cargo.toml Cargo.lock /temp/dev/
+COPY backend /
 COPY --from=frontend-build /usr/src/app/dist /temp/dev/frontend/dist
-COPY src /temp/dev/src
-RUN cd /temp/dev && cargo fetch
-RUN cd /temp/dev && cargo build --release
+COPY --from=backend-cacher /usr/local/cargo/registry /usr/local/cargo/registry
+COPY --from=backend-cacher /usr/local/cargo/git /usr/local/cargo/git
+RUN cargo build --release
 
 FROM ubuntu:24.04 AS base
 WORKDIR /usr/src/app
@@ -38,5 +48,5 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS final
-COPY --from=backend-build /temp/dev/target/release/kura-indexder-nyaa /usr/src/app/kura-indexder-nyaa
+COPY --from=backend-build /usr/src/app/target/release/kura-indexer-nyaa /kura-indexer-nyaa
 
