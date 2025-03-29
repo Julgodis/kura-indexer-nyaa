@@ -4,7 +4,7 @@ use axum::{Extension, Json, extract::Path, response::IntoResponse};
 use reqwest::{ClientBuilder, StatusCode, Url};
 
 use crate::{
-    data,
+    NyaaContext, data,
     frontend::types::{Torrent, TorrentListResponse, TorrentResponse},
     html,
 };
