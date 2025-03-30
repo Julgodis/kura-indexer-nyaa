@@ -31,7 +31,10 @@ where
         match Asset::get(path.as_str()) {
             Some(content) => {
                 let mime = mime_guess::from_path(path).first_or_octet_stream();
-                ([(header::CONTENT_TYPE, mime.as_ref())], content.data).into_response()
+                ([
+                    (header::CONTENT_TYPE, mime.as_ref()),
+                    (header::CACHE_CONTROL, "public, max-age=3600"),
+                ], content.data).into_response()
             }
             None => (StatusCode::NOT_FOUND, "404 Not Found").into_response(),
         }

@@ -9,14 +9,12 @@ import { Separator } from '../ui/separator';
 
 export function SearchForm({ search }: { search: ListSearch }) {
   const [term, setTerm] = useState('');
-  const [fieldTerm, setFieldTerm] = useState('');
   const [category, setCategory] = useState<TorrentCategory>('0_0');
   const [filter, setFilter] = useState<TorrentFilter>('0');
   const navigate = useNavigate();
 
   useEffect(() => {
     setTerm(search.term ?? '');
-    setFieldTerm(search.term ?? '');
     setCategory(search.category ?? '0_0');
     setFilter(search.filter ?? '0');
   }
@@ -53,27 +51,21 @@ export function SearchForm({ search }: { search: ListSearch }) {
     }
   };
 
-
-  // Handle category change
   const handleCategoryChange = (value: string) => {
     const newCategory = value as TorrentCategory;
-    setTerm(fieldTerm);
     setCategory(newCategory);
-    onSearch(fieldTerm, newCategory, filter);
+    onSearch(term, newCategory, filter);
   };
 
-  // Handle filter change
   const handleFilterChange = (value: string) => {
     const newFilter = value as TorrentFilter;
-    setTerm(fieldTerm);
     setFilter(newFilter);
-    onSearch(fieldTerm, category, newFilter);
+    onSearch(term, category, newFilter);
   };
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setTerm(fieldTerm);
-    onSearch(fieldTerm, category, filter);
+    onSearch(term, category, filter);
   }
 
   return (
@@ -84,8 +76,8 @@ export function SearchForm({ search }: { search: ListSearch }) {
             <Input
               type="text"
               placeholder="Search..."
-              value={fieldTerm}
-              onChange={(e) => setFieldTerm(e.target.value)}
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
             />
           </div>
           <Select
