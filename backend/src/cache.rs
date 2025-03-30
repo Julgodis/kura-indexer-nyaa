@@ -1,10 +1,10 @@
+use reqwest::Url;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use reqwest::Url;
-use serde::{Serialize, Deserialize, de::DeserializeOwned};
 use uuid::Uuid;
 
 /// In-memory metadata for a cache entry.
@@ -37,11 +37,18 @@ impl Cache {
     /// Creates a new cache with the given base directory and maximum total size.
     /// On start, the base directory is cleared.
     pub fn new(base_dir: PathBuf, max_size: u64) -> io::Result<Self> {
-        // Clear the cache directory if it exists.
-        if base_dir.exists() {
-            fs::remove_dir_all(&base_dir)?;
+        // Remove all files in the base directory.
+        for entry in fs::read_dir(&base_dir)? {
+            let entry = entry?;
+            if entry.file_type()?.is_file() {
+                match fs::remove_file(entry.path()) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::warn!("failed to remove file {}: {}", entry.path().display(), e);
+                    }
+                }
+            }
         }
-        fs::create_dir_all(&base_dir)?;
 
         Ok(Self {
             base_dir,
@@ -53,7 +60,8 @@ impl Cache {
 
     /// Returns the current time as seconds since the UNIX epoch.
     fn now_secs() -> u64 {
-        SystemTime::now().duration_since(UNIX_EPOCH)
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
             .expect("Time went backwards")
             .as_secs()
     }
@@ -74,7 +82,9 @@ impl Cache {
 
     /// Evicts the oldest cache entry (by creation time) if any exist.
     fn evict_oldest(&mut self) {
-        if let Some((oldest_key, _)) = self.metadata.iter()
+        if let Some((oldest_key, _)) = self
+            .metadata
+            .iter()
             .min_by_key(|(_, meta)| meta.created)
             .map(|(k, meta)| (k.clone(), meta.clone()))
         {
@@ -86,7 +96,9 @@ impl Cache {
     /// Iterates over all in-memory metadata, removing those entries whose lifetime has passed.
     pub fn cleanup(&mut self) {
         let now = Self::now_secs();
-        let expired_keys: Vec<String> = self.metadata.iter()
+        let expired_keys: Vec<String> = self
+            .metadata
+            .iter()
             .filter(|(_, meta)| now > meta.created + meta.lifetime)
             .map(|(key, _)| key.clone())
             .collect();
@@ -107,8 +119,8 @@ impl Cache {
         T: Serialize,
     {
         // Serialize data to JSON.
-        let data_bytes = serde_json::to_vec(data)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let data_bytes =
+            serde_json::to_vec(data).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let data_size = data_bytes.len() as u64;
 
         // Remove expired entries.
@@ -121,7 +133,10 @@ impl Cache {
 
         // If there's still not enough room, return an error.
         if self.total_size + data_size > self.max_size {
-            return Err(io::Error::new(io::ErrorKind::Other, "Not enough space in cache"));
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Not enough space in cache",
+            ));
         }
 
         // Generate a new UUID for this entry.
