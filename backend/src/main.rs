@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::{net::SocketAddr, time::Duration};
 
 use clap::Parser;
@@ -39,6 +40,10 @@ struct Config {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct KuraConfig {
     listen_addr: SocketAddr,
+    #[serde(default)]
+    local_addr: Option<IpAddr>,
+    #[serde(default)]
+    interface: Option<String>,
     db_path: String,
     event_db_path: String,
     cache_path: String,
@@ -136,6 +141,8 @@ async fn main() {
         config.nyaa.timeout,
         config.nyaa.max_retries,
         cache_path,
+        config.kura.local_addr,
+        config.kura.interface,
     )
     .expect("Failed to create client");
 

@@ -1,3 +1,4 @@
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -34,16 +35,25 @@ impl Client {
         timeout: Duration,
         max_retries: usize,
         cache_path: PathBuf,
+        local_address: Option<IpAddr>,
+        interface: Option<String>,
     ) -> Result<Self> {
-        let inner = ClientBuilder::new()
+        let mut inner = ClientBuilder::new()
             .user_agent(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
                          AppleWebKit/537.36 (KHTML, like Gecko) \
                          Chrome/58.0.3029.110 Safari/537.3",
             )
             .connect_timeout(connect_timeout)
-            .timeout(timeout)
-            .build()?;
+            .timeout(timeout);
+
+        if let Some(addr) = local_address {
+            inner = inner.local_address(addr);
+        } else if let Some(iface) = interface {
+            inner = inner.interface(&iface);
+        }
+
+        let inner = inner.build()?;
         Ok(Self {
             inner,
             min_interval,
@@ -157,8 +167,7 @@ impl Client {
             };
 
             match result {
-                Ok(data) => 
-                    Ok(data),
+                Ok(data) => Ok(data),
                 Err(err) => {
                     tracing::warn!("unparsable data:\n{:?}", err);
                     Err(err)
