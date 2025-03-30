@@ -78,31 +78,6 @@ pub async fn torrents_handler(
     }
 }
 
-async fn fetch_view(url: Url) -> anyhow::Result<data::View> {
-    let client = ClientBuilder::new()
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-            .connect_timeout(Duration::from_secs(10))
-            .timeout(Duration::from_secs(30))
-            .build()?;
-
-    let response = client
-        .get(url)
-        .header("Accept", "text/html, */*; q=0.9")
-        .send()
-        .await?;
-
-    if !response.status().is_success() {
-        return Err(anyhow::anyhow!(
-            "failed to fetch URL: {}",
-            response.status()
-        ));
-    }
-
-    let data = response.text().await?;
-    tracing::trace!("fetched data: {}", data);
-    html::parse_view(&data)
-}
-
 #[axum::debug_handler]
 pub async fn torrent_handler(
     Extension(context): Extension<NyaaContext>,
@@ -119,7 +94,7 @@ pub async fn torrent_handler(
         }
     };
 
-    match fetch_view(url).await {
+    match context.client.fetch_view(url).await {
         Ok(response) => {
             tracing::trace!("response: {:?}", response);
             let torrent = TorrentResponse {
@@ -144,6 +119,46 @@ pub async fn torrent_handler(
                 comments: response.comments,
             };
             (StatusCode::OK, Json(torrent)).into_response()
+        }
+        Err(err) => {
+            tracing::error!("Error: {:?}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
+        }
+    }
+}
+
+#[axum::debug_handler]
+pub async fn stats_torrents_per_day_handler(
+    Extension(context): Extension<NyaaContext>,
+) -> impl IntoResponse {
+    let result: anyhow::Result<_> = (|| {
+        let db = context.db()?;
+        Ok(NyaaContext::get_torrent_per_day(&db)?)
+    })();
+
+    match result {
+        Ok(response) => {
+            tracing::trace!("response: {:?}", response);
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(err) => {
+            tracing::error!("Error: {:?}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
+        }
+    }
+}
+
+#[axum::debug_handler]
+pub async fn stats_events(Extension(context): Extension<NyaaContext>) -> impl IntoResponse {
+    let result: anyhow::Result<_> = (|| {
+        let event_db = context.event_db()?;
+        Ok(NyaaContext::get_events(&event_db)?)
+    })();
+
+    match result {
+        Ok(response) => {
+            tracing::debug!("response: {:?}", response);
+            (StatusCode::OK, Json(response)).into_response()
         }
         Err(err) => {
             tracing::error!("Error: {:?}", err);

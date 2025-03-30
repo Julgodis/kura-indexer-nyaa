@@ -9,12 +9,14 @@ use kura_indexer::{
     server::Indexer,
 };
 
-use crate::data;
+use crate::{client, data, frontend::types::{EventItem, TorrentsPerDayItem}};
 
 #[derive(Debug, Clone)]
 pub struct NyaaContext {
     pub update_interval: Duration,
     pub db_path: PathBuf,
+    pub event_db_path: PathBuf,
+    pub client: client::Client,
 }
 
 impl NyaaContext {
@@ -77,6 +79,10 @@ INSERT INTO items (
 
     pub fn db(&self) -> anyhow::Result<rusqlite::Connection> {
         Ok(rusqlite::Connection::open(&self.db_path)?)
+    }
+
+    pub fn event_db(&self) -> anyhow::Result<rusqlite::Connection> {
+        Ok(rusqlite::Connection::open(&self.event_db_path)?)
     }
 
     pub fn get_item_count(db: &rusqlite::Connection) -> anyhow::Result<usize> {
@@ -188,6 +194,53 @@ INSERT INTO items (
         })?;
         let items = items.collect::<Result<Vec<_>, _>>()?;
         Ok((offset, count, items))
+    }
+
+    pub fn get_torrent_per_day(db: &rusqlite::Connection) -> anyhow::Result<Vec<TorrentsPerDayItem>> {
+        let mut stmt = db.prepare(
+            r#"
+SELECT strftime('%Y-%m-%d', date) AS rounded_date, COUNT(*) AS count
+FROM items
+GROUP BY rounded_date
+ORDER BY rounded_date DESC
+LIMIT 30;
+"#,
+        )?;
+
+        let items = stmt.query_map([], |row| {
+            Ok(TorrentsPerDayItem {
+                date: row.get::<_, String>(0)?,
+                count: row.get::<_, usize>(1)?,
+            })
+        })?;
+        let mut items = items.collect::<Result<Vec<_>, _>>()?;
+        items.reverse();
+        Ok(items)
+    }
+
+    pub fn get_events(
+        db: &rusqlite::Connection,
+    ) -> anyhow::Result<Vec<EventItem>> {
+        let mut stmt = db.prepare(
+            r#"
+SELECT url, rate_limited, event, status, date
+FROM events
+ORDER BY date DESC
+LIMIT 100;
+"#,
+        )?;
+
+        let items = stmt.query_map([], |row| {
+            Ok(EventItem {
+                url: row.get(0)?,
+                rate_limited: row.get(1)?,
+                event: row.get(2)?,
+                status: row.get(3)?,
+                date: row.get(4)?,
+            })
+        })?;
+        let items = items.collect::<Result<Vec<_>, _>>()?;
+        Ok(items)
     }
 }
 

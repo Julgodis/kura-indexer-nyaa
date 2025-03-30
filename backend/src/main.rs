@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
+pub mod client;
 pub mod data;
 pub mod html;
 pub mod indexer;
@@ -38,6 +39,7 @@ struct Config {
 struct KuraConfig {
     listen_addr: SocketAddr,
     db_path: String,
+    event_db_path: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -45,7 +47,9 @@ struct NyaaConfig {
     url: String,
     #[serde(with = "humantime_serde")]
     update_interval: Duration,
-    requests_per_second: usize,
+    requests_per_window: usize,
+    #[serde(with = "humantime_serde")]
+    window_size: Duration,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -86,9 +90,38 @@ async fn main() {
         .execute_batch(include_str!("../schema.sql"))
         .unwrap_or_else(|_| panic!("Failed to execute schema.sql"));
 
+    let event_db_path = PathBuf::from(&config.kura.event_db_path);
+    if !event_db_path.exists() {
+        fs::create_dir_all(event_db_path.parent().unwrap())
+            .unwrap_or_else(|_| panic!("Failed to create directory: {:?}", event_db_path));
+    }
+
+    rusqlite::Connection::open(&event_db_path)
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failed to open event database: {}",
+                config.kura.event_db_path
+            )
+        })
+        .execute_batch(include_str!("../event_schema.sql"))
+        .unwrap_or_else(|_| panic!("Failed to execute event_schema.sql"));
+
+    let min_interval = Duration::from_secs_f64(
+        config.nyaa.window_size.as_secs_f64() / config.nyaa.requests_per_window as f64,
+    );
+    let min_interval = if min_interval < Duration::from_secs(1) {
+        Duration::from_secs(1)
+    } else {
+        min_interval
+    };
+    let client =
+        client::Client::new(min_interval, event_db_path.clone()).expect("Failed to create client");
+
     let context = NyaaContext {
         update_interval: config.nyaa.update_interval,
         db_path,
+        event_db_path,
+        client,
     };
 
     let url = Url::parse(&config.nyaa.url)

@@ -12,6 +12,13 @@ export function Navigation() {
                         </Link>
                     </NavigationMenuLink>
                 </NavigationMenuItem>
+                <NavigationMenuItem>
+                    <NavigationMenuLink className={navigationMenuTriggerStyle()} asChild>
+                        <Link to="/stats">
+                            Statistics
+                        </Link>
+                    </NavigationMenuLink>
+                </NavigationMenuItem>
             </NavigationMenuList>
         </NavigationMenu>
     );

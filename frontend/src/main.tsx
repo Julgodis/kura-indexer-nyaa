@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 
 import { RouterProvider, createRouter } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsInProd } from '@tanstack/react-router-devtools'
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
@@ -30,7 +29,6 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <RouterProvider router={router} />
-        <TanStackRouterDevtoolsInProd router={router} />
       </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,

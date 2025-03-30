@@ -20,6 +20,11 @@ pub fn routes(builder: ServerBuilderIndexer<NyaaIndexer>) -> ServerBuilderIndexe
         .route("/", axum::routing::get(index_handler))
         .route("/api/torrent/{id}", axum::routing::get(torrent_handler))
         .route("/api/torrents", axum::routing::post(torrents_handler))
+        .route(
+            "/api/stats/torrents-per-day",
+            axum::routing::get(api::stats_torrents_per_day_handler),
+        )
+        .route("/api/stats/actions", axum::routing::get(api::stats_events))
         .route("/static/{*path}", axum::routing::get(static_handler))
         .route("/{*path}", axum::routing::get(index_handler))
         .with_router(|x| x.layer(TraceLayer::new_for_http()));

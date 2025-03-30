@@ -105,3 +105,18 @@ pub struct TorrentResponse {
     pub files: Vec<data::File>,
     pub comments: Vec<data::Comment>,
 }
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct TorrentsPerDayItem {
+    pub date: String,
+    pub count: usize,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct EventItem {
+    pub url: String,
+    pub date: chrono::DateTime<chrono::Utc>,
+    pub event: String,
+    pub status: String,
+    pub rate_limited: bool,
+}

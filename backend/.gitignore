@@ -1,4 +1,4 @@
 /target
 .vscode
-nyaa-indexer.db
+*.db
 nyaa-indexer.toml

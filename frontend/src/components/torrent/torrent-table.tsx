@@ -4,6 +4,7 @@ import { Torrent, TorrentSort } from '@/types';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowUpDown } from 'lucide-react'; // Assuming you use Lucide icons
 import { Route } from '@/routes';
+import { format } from 'date-fns';
 
 interface TorrentTableProps {
   torrents: Torrent[];
@@ -11,28 +12,22 @@ interface TorrentTableProps {
 
 
 function SizeDisplay({ size }: { size: number }) {
-  const sizeInMB = size / (1024 * 1024);
-  if (sizeInMB < 1) {
+  const sizeInKib = size / 1024;
+  const sizeInMiB = sizeInKib / 1024;
+  const sizeInGiB = sizeInMiB / 1024;
+  if (sizeInKib < 1024) {
     return <span>{size} B</span>;
-  } else if (sizeInMB < 1024) {
-    return <span>{sizeInMB.toFixed(2)} MiB</span>;
+  } else if (sizeInMiB < 1024) {
+    return <span>{sizeInKib.toFixed(2)} KiB</span>;
+  } else if (sizeInGiB < 1024) {
+    return <span>{sizeInMiB.toFixed(2)} MiB</span>;
   } else {
-    return <span>{(sizeInMB / 1024).toFixed(2)} GiB</span>;
+    return <span>{sizeInGiB.toFixed(2)} GiB</span>;
   }
 }
 
 function DateDisplay({ date }: { date: string }) {
-  const dateObj = new Date(date);
-  const options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  };
-  const formattedDate = dateObj.toLocaleDateString('en-US', options);
+  const formattedDate = format(new Date(date), 'yyyy-MM-dd HH:mm');
   return <span>{formattedDate}</span>;
 }
 

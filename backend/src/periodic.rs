@@ -32,53 +32,9 @@ impl NyaaPeriodic {
         });
     }
 
-    async fn fetch_data(url: Url) -> anyhow::Result<Vec<data::Item>> {
-        let client = ClientBuilder::new()
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-            .connect_timeout(Duration::from_secs(10))
-            .timeout(Duration::from_secs(30))
-            .build()?;
-
-        let response = client
-            .get(url)
-            .header("Accept", "application/xml, text/html, */*; q=0.9")
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            return Err(anyhow::anyhow!(
-                "failed to fetch URL: {}",
-                response.status()
-            ));
-        }
-
-        let content_type = response
-            .headers()
-            .get("Content-Type")
-            .and_then(|v| v.to_str().ok())
-            .context("failed to get content type")?
-            .to_string();
-        tracing::trace!("content type: {}", content_type);
-
-        let data = response.text().await?;
-        tracing::trace!("fetched data: {}", data);
-
-        if content_type.contains("application/xml") {
-            tracing::trace!("XML content type detected");
-            rss::parse(&data)
-        } else if content_type.contains("text/html") {
-            tracing::trace!("HTML content type detected");
-            html::parse_list(&data)
-        } else {
-            return Err(anyhow::anyhow!(
-                "unsupported content type: {}",
-                content_type
-            ));
-        }
-    }
 
     async fn process(context: &NyaaContext, url: Url) -> anyhow::Result<()> {
-        let data = Self::fetch_data(url).await?;
+        let data = context.client.fetch_list(url).await?;
         tracing::trace!("fetched data: {:#?}", data);
         tracing::debug!("found {} items", data.len());
 
@@ -93,8 +49,6 @@ impl NyaaPeriodic {
             Ok(_) => {}
             Err(e) => {
                 tracing::error!("error fetching data: {:?}", e);
-                tokio::time::sleep(Duration::from_secs(5)).await;
-                tracing::warn!("trying another URL...");
             }
         }
     }
