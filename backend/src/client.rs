@@ -76,7 +76,7 @@ impl Client {
         }
     }
 
-    pub async fn fetch_list(&self, url: Url) -> Result<Vec<data::Item>> {
+    pub async fn fetch_list(&self, url: Url) -> Result<(Vec<data::Item>, bool)> {
         let timer = Instant::now();
         let result = self.fetch_list_inner(url.clone()).await;
         let elapsed = timer.elapsed();
@@ -93,7 +93,7 @@ impl Client {
                         cached: Some(cached),
                     },
                 );
-                Ok(data)
+                Ok((data, cached))
             }
             Err(err) => {
                 tracing::error!("failed to fetch data from {}: {:?}", url, err);

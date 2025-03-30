@@ -32,13 +32,14 @@ impl NyaaPeriodic {
         });
     }
 
-
     async fn process(context: &NyaaContext, url: Url) -> anyhow::Result<()> {
-        let data = context.client.fetch_list(url).await?;
+        let (data, cached) = context.client.fetch_list(url).await?;
         tracing::trace!("fetched data: {:#?}", data);
         tracing::debug!("found {} items", data.len());
 
-        context.add_items(&data)?;
+        if !cached {
+            context.add_items(&data)?;
+        }
         Ok(())
     }
 

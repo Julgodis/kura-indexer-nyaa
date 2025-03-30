@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use axum::{body::Body, extract::Path, response::IntoResponse, Extension, Json};
+use axum::{Extension, Json, body::Body, extract::Path, response::IntoResponse};
 use reqwest::{ClientBuilder, StatusCode, Url};
 
 use crate::{
@@ -130,14 +130,19 @@ pub async fn torrents_handler(
             tracing::debug!("request: {:?}", url);
 
             match context.client.fetch_list(url).await {
-                Ok(response) => {
+                Ok((response, cached)) => {
                     tracing::trace!("response: {:?}", response);
-                    match context.add_items(&response) {
-                        Ok(_) => {}
-                        Err(err) => {
-                            tracing::error!("Error: {:?}", err);
-                            return (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-                                .into_response();
+                    if !cached {
+                        match context.add_items(&response) {
+                            Ok(_) => {}
+                            Err(err) => {
+                                tracing::error!("Error: {:?}", err);
+                                return (
+                                    StatusCode::INTERNAL_SERVER_ERROR,
+                                    "Internal server error",
+                                )
+                                    .into_response();
+                            }
                         }
                     }
 

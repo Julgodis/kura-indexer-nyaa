@@ -70,6 +70,7 @@ INSERT INTO items (
 "#,
         )?;
 
+        let start = std::time::Instant::now();
         for item in items {
             stmt.execute(params![
                 item.id,
@@ -89,7 +90,8 @@ INSERT INTO items (
             ])?;
         }
 
-        tracing::info!("Added {} items to the database", items.len());
+        let elapsed = start.elapsed();
+        tracing::info!("added {} items to the database in {:?}", items.len(), elapsed);
 
         Ok(())
     }
