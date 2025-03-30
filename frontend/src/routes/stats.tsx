@@ -213,7 +213,7 @@ function RouteComponent() {
 
 const chartConfig = {
   views: {
-    label: "Page Views",
+    label: "Torrents",
   },
   count: {
     label: "Desktop",

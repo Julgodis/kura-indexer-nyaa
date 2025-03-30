@@ -125,6 +125,8 @@ pub enum Event {
     },
     FetchList {
         url: String,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
         elapsed: f64,
         #[serde(default)]
@@ -136,6 +138,8 @@ pub enum Event {
     },
     FetchView {
         url: String,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
         elapsed: f64,
         #[serde(default)]
@@ -144,6 +148,8 @@ pub enum Event {
     },
     Download {
         url: String,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
         elapsed: f64,
         #[serde(default)]
