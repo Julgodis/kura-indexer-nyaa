@@ -11,6 +11,8 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 // Create a new router instance
 const router = createRouter({ routeTree })
@@ -29,6 +31,8 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <RouterProvider router={router} />
+        <ReactQueryDevtools />
+        <TanStackRouterDevtools router={router} />
       </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,

@@ -19,6 +19,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@tailwindcss/vite": "^4.0.17",
     "@tanstack/react-query": "^5.70.0",
+    "@tanstack/react-query-devtools": "^5.70.0",
     "@tanstack/react-router": "^1.114.29",
     "@tanstack/zod-adapter": "^1.114.29",
     "class-variance-authority": "^0.7.1",

@@ -3,8 +3,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Torrent, TorrentSort } from '@/types';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowUpDown } from 'lucide-react'; // Assuming you use Lucide icons
-import { Route } from '@/routes';
 import { format } from 'date-fns';
+import { Route } from '@/routes/_list.index';
 
 interface TorrentTableProps {
   torrents: Torrent[];

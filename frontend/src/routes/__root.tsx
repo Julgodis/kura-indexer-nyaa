@@ -12,7 +12,7 @@ function RootComponent() {
     <React.Fragment>
       <div className="mx-auto container">
         <Header />
-        <main className="container mx-auto py-6 px-4">
+        <main className="container mx-auto">
           <Outlet />
         </main>
         <Footer />

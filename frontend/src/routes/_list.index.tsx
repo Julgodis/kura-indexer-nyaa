@@ -1,8 +1,7 @@
-import { SearchForm } from '@/components/search/search-form';
 import { TorrentPagination } from '@/components/torrent/torrent-pagination';
 import { TorrentTable } from '@/components/torrent/torrent-table';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, ErrorComponentProps } from '@tanstack/react-router'
 import { z } from 'zod'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { TorrentCategorySchema, TorrentFilterSchema, TorrentListResponseSchema, TorrentSortOrderSchema, TorrentSortSchema } from '@/types';
@@ -53,9 +52,10 @@ const torrentsQueryOptions = ({
     },
   });
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_list/')({
   component: RouteComponent,
-  errorComponent: () => <div>Error</div>,
+  errorComponent: ErrorComponent,
+  pendingComponent: PendingComponent,
   validateSearch: zodValidator(torrentParamSchema),
   loaderDeps: ({ search }) => ({ search }),
   loader: ({ deps: { search } }) => queryClient.ensureQueryData(torrentsQueryOptions(search)),
@@ -69,7 +69,6 @@ function RouteComponent() {
 
   if (isFetching) {
     return <>
-      <SearchForm />
       <div className="flex justify-center items-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
@@ -94,7 +93,6 @@ function RouteComponent() {
   };
 
   return <>
-    <SearchForm />
     <TorrentTable torrents={mockTorrents} />
     <TorrentPagination
       currentPage={currentPage}
@@ -102,4 +100,26 @@ function RouteComponent() {
       onPageChange={onPageChange}
     />
   </>;
-} 
+}
+
+function PendingComponent() {
+  return (
+    <div className="flex justify-center items-center min-h-[400px]">
+      <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+  );
+}
+
+function ErrorComponent(props: ErrorComponentProps) {
+  return (
+    <div className="flex justify-center items-center min-h-[400px]">
+      <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="text-center text-destructive">
+        Failed to load torrents
+      </div>
+      <div className="text-sm text-muted-foreground">
+        {props.error.message}
+      </div>
+    </div>
+  );
+}

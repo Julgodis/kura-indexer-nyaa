@@ -3,7 +3,7 @@ import nyaaLogoUrl from '@/assets/nyaa.png';
 
 export function Header() {
     return (
-        <header className="border-b">
+        <header>
             <div className="py-4">
                 <div className="flex justify-between items-center gap-2">
                     <img src={nyaaLogoUrl} alt="Logo" className="h-12 w-12" />
