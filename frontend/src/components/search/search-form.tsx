@@ -29,12 +29,6 @@ export function SearchForm({ search }: { search: ListSearch }) {
     const categoryChanged = newCategory !== search.category;
     const filterChanged = newFilter !== search.filter;
 
-    // Only update the state if any of the values have changed
-    console.log('onSearch', {
-      term: newTerm,
-      category: newCategory,
-      filter: newFilter,
-    }, { term: termChanged, category: categoryChanged, filter: filterChanged });
     if (termChanged || categoryChanged || filterChanged) {
       navigate({
         to: '/',
