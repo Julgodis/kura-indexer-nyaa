@@ -3,9 +3,13 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
+use humantime_serde::re;
 use reqwest::{Client as ReqwestClient, ClientBuilder, StatusCode, Url};
+use sha2::Digest;
+use sha2::Sha256;
 use tokio::sync::Mutex;
 
+use crate::cache::Cache;
 use crate::frontend::types::Event;
 use crate::{data, html, rss};
 
@@ -18,6 +22,7 @@ pub struct Client {
     last_request: Arc<Mutex<Instant>>,
     db_path: PathBuf,
     max_retries: usize,
+    cache: Arc<Mutex<Cache>>,
 }
 
 impl Client {
@@ -28,6 +33,7 @@ impl Client {
         connect_timeout: Duration,
         timeout: Duration,
         max_retries: usize,
+        cache_path: PathBuf,
     ) -> Result<Self> {
         let inner = ClientBuilder::new()
             .user_agent(
@@ -46,6 +52,7 @@ impl Client {
             )),
             db_path,
             max_retries,
+            cache: Arc::new(Mutex::new(Cache::new(cache_path, 16 * 1024 * 1024)?)),
         })
     }
 
@@ -70,8 +77,6 @@ impl Client {
     }
 
     pub async fn fetch_list(&self, url: Url) -> Result<Vec<data::Item>> {
-        self.rate_limit(&url).await;
-
         let timer = Instant::now();
         let result = self.fetch_list_inner(url.clone()).await;
         let elapsed = timer.elapsed();
@@ -82,6 +87,7 @@ impl Client {
                 url: url.to_string(),
                 error: result.as_ref().err().map(|e| e.to_string()),
                 elapsed: elapsed.as_secs_f64(),
+                item_count: Some(result.as_ref().map(|v| v.len()).unwrap_or(0)),
             },
         );
         match result {
@@ -94,6 +100,11 @@ impl Client {
     }
 
     async fn fetch_list_inner(&self, url: Url) -> Result<Vec<data::Item>> {
+        if let Some(result) = self.cache.lock().await.get::<Vec<data::Item>>(&url) {
+            tracing::debug!("cache hit for URL: {}", url);
+            return Ok(result);
+        }
+
         let fetch = |url: Url| async move {
             let response = self
                 .inner
@@ -134,7 +145,19 @@ impl Client {
             result
         };
 
-        self.retry_fetch(url, fetch).await
+        match self.retry_fetch(url.clone(), fetch).await {
+            Ok(data) => {
+                self.cache
+                    .lock()
+                    .await
+                    .put(&url, Duration::from_secs(60), &data)?;
+                Ok(data)
+            }
+            Err(err) => {
+                tracing::error!("failed to fetch data: {:?}", err);
+                Err(err)
+            }
+        }
     }
 
     async fn rate_limit(&self, url: &Url) {
@@ -156,8 +179,6 @@ impl Client {
     }
 
     pub async fn fetch_view(&self, url: Url) -> Result<data::View> {
-        self.rate_limit(&url).await;
-
         let timer = Instant::now();
         let result = self.fetch_view_inner(url.clone()).await;
         let elapsed = timer.elapsed();
@@ -186,6 +207,8 @@ impl Client {
     {
         let mut retries = 0;
         loop {
+            self.rate_limit(&url).await;
+
             match fetch(url.clone()).await {
                 Ok(data) => return Ok(data),
                 Err(err) => {
@@ -202,6 +225,11 @@ impl Client {
     }
 
     async fn fetch_view_inner(&self, url: Url) -> anyhow::Result<data::View> {
+        if let Some(result) = self.cache.lock().await.get::<data::View>(&url) {
+            tracing::debug!("cache hit for URL: {}", url);
+            return Ok(result);
+        }
+
         let fetch = |url: Url| async move {
             let response = self
                 .inner
@@ -222,15 +250,23 @@ impl Client {
             html::parse_view(&data)
         };
 
-        //self.retry_fetch(url, fetch).await
-
-        let data = include_str!("../target/view.html");
-        html::parse_view(&data)
+        let result = self.retry_fetch(url.clone(), fetch).await;
+        match result {
+            Ok(data) => {
+                self.cache
+                    .lock()
+                    .await
+                    .put(&url, Duration::from_secs(10 * 60), &data)?;
+                Ok(data)
+            }
+            Err(err) => {
+                tracing::error!("failed to fetch data: {:?}", err);
+                Err(err)
+            }
+        }
     }
 
     pub async fn download(&self, url: Url) -> Result<(Vec<u8>, String)> {
-        self.rate_limit(&url).await;
-
         let timer = Instant::now();
         let result = self.download_inner(url.clone()).await;
         let elapsed = timer.elapsed();
@@ -253,6 +289,11 @@ impl Client {
     }
 
     async fn download_inner(&self, url: Url) -> Result<(Vec<u8>, String)> {
+        if let Some(result) = self.cache.lock().await.get::<(Vec<u8>, String)>(&url) {
+            tracing::debug!("cache hit for URL: {}", url);
+            return Ok(result);
+        }
+
         let fetch = |url: Url| async move {
             let response = self
                 .inner
@@ -279,6 +320,18 @@ impl Client {
             Ok((data.to_vec(), content_type))
         };
 
-        self.retry_fetch(url, fetch).await
+        match self.retry_fetch(url.clone(), fetch).await {
+            Ok(data) => {
+                self.cache
+                    .lock()
+                    .await
+                    .put(&url, Duration::from_secs(10 * 60), &data)?;
+                Ok(data)
+            }
+            Err(err) => {
+                tracing::error!("failed to download data: {:?}", err);
+                Err(err)
+            }
+        }
     }
 }

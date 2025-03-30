@@ -16,6 +16,7 @@ pub mod indexer;
 pub mod periodic;
 pub mod rss;
 pub mod url;
+pub mod cache;
 
 #[cfg(feature = "frontend")]
 pub mod frontend;
@@ -40,6 +41,7 @@ struct KuraConfig {
     listen_addr: SocketAddr,
     db_path: String,
     event_db_path: String,
+    cache_path: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -120,12 +122,20 @@ async fn main() {
     } else {
         min_interval
     };
+
+    let cache_path = PathBuf::from(&config.kura.cache_path);
+    if !cache_path.exists() {
+        fs::create_dir_all(cache_path.parent().unwrap())
+            .unwrap_or_else(|_| panic!("Failed to create directory: {:?}", cache_path));
+    }
+
     let client = client::Client::new(
         min_interval,
         event_db_path.clone(),
         config.nyaa.connect_timeout,
         config.nyaa.timeout,
         config.nyaa.max_retries,
+        cache_path,
     )
     .expect("Failed to create client");
 

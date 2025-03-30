@@ -22,7 +22,7 @@ pub fn parse(data: &str) -> anyhow::Result<data::View> {
         .ok_or_else(|| anyhow::anyhow!("Failed to parse ID from download link"))?
         .replace(".torrent", "");
     let id = id.parse::<usize>()?;
-    tracing::debug!("Parsed ID: {}", id);
+    tracing::trace!("parsed ID: {}", id);
 
     // Parse title
     let title_selector = Selector::parse(".panel-title").unwrap();
@@ -135,11 +135,11 @@ fn find_value(document: &Html, label: &str) -> anyhow::Result<String> {
                 .to_lowercase()
                 .to_string();
             if text.contains(&label) {
-                tracing::debug!("Found label: {:?}", text);
+                tracing::trace!("found label: {:?}", text);
                 let next_child = children.next();
                 if let Some(next) = next_child {
                     let number_text = next.text().collect::<String>();
-                    tracing::debug!("Found value: {:?}", number_text);
+                    tracing::trace!("found value: {:?}", number_text);
                     return Ok(number_text.trim().to_string());
                 }
                 return Err(anyhow::anyhow!("No number found after label: {}", label));
