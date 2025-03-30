@@ -17,13 +17,30 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { useQuery } from '@tanstack/react-query'
+import { queryOptions, useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { format } from 'date-fns'
+import { queryClient, urlTransform } from '@/main'
+
+const statsQuerryOptions = queryOptions({
+  queryKey: ['stats', 'torrent-per-day'],
+  queryFn: async () => {
+    const response = await fetch(urlTransform('/api/stats/torrents-per-day'))
+    if (!response.ok) {
+      throw new Error('Failed to fetch stats')
+    }
+    const data = await response.json();
+    const parsedData = torrentPerDaySchema.parse(data);
+    return parsedData;
+  },
+})
 
 export const Route = createFileRoute('/stats')({
   component: RouteComponent,
+  pendingComponent: PendingComponent,
+  errorComponent: ErrorComponent,
+  loader: () => queryClient.ensureQueryData(statsQuerryOptions),
 })
 
 const torrentPerDaySchema = z.array(
@@ -44,38 +61,7 @@ const eventsSchema = z.array(
 
 function TorrentsPerDay() {
 
-  const query = useQuery({
-    queryKey: ['stats', 'torrent-per-day'],
-    queryFn: async () => {
-      const url = import.meta.env.VITE_API_URL
-      const response = await fetch(`${url}api/stats/torrents-per-day`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch stats')
-      }
-      const data = await response.json();
-      const parsedData = torrentPerDaySchema.parse(data);
-      return parsedData;
-    },
-  })
-
-  if (query.isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
-  if (query.isError) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center text-destructive">
-            Failed to load stats
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
+  const { data } = useSuspenseQuery(statsQuerryOptions)
 
   return (
     <Card>
@@ -92,7 +78,7 @@ function TorrentsPerDay() {
         >
           <BarChart
             accessibilityLayer
-            data={query.data}
+            data={data}
             margin={{
               left: 12,
               right: 12,
@@ -220,4 +206,25 @@ const chartConfig = {
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig
+
+
+function PendingComponent() {
+  return (
+    <div className="flex justify-center items-center min-h-[400px]">
+      <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+  )
+}
+
+function ErrorComponent(props: { error: Error }) {
+  return (
+    <div className="flex justify-center items-center min-h-[400px]">
+      <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="text-center text-destructive">
+        Failed to load stats
+      </div>
+      {props.error.message}
+    </div>
+  )
+}
 

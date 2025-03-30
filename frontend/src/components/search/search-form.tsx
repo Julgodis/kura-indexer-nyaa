@@ -4,18 +4,15 @@ import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ZoomIn } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
-import { TorrentCategory, TorrentFilter } from '@/types';
+import { ListSearch, TorrentCategory, TorrentFilter } from '@/types';
 import { Separator } from '../ui/separator';
-import { Route } from '@/routes/_list.index';
 
-export function SearchForm({}: {}) {
+export function SearchForm({ search }: { search: ListSearch }) {
   const [term, setTerm] = useState('');
   const [fieldTerm, setFieldTerm] = useState('');
   const [category, setCategory] = useState<TorrentCategory>('0_0');
   const [filter, setFilter] = useState<TorrentFilter>('0');
   const navigate = useNavigate();
-  const search = Route.useSearch();
-
 
   useEffect(() => {
     setTerm(search.term ?? '');

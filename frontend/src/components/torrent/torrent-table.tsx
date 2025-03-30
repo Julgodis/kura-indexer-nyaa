@@ -1,13 +1,13 @@
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Torrent, TorrentSort } from '@/types';
-import { useNavigate } from '@tanstack/react-router';
+import { ListSearch, Torrent, TorrentSort } from '@/types';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowUpDown } from 'lucide-react'; // Assuming you use Lucide icons
 import { format } from 'date-fns';
-import { Route } from '@/routes/_list.index';
 
 interface TorrentTableProps {
   torrents: Torrent[];
+  search: ListSearch;
 }
 
 
@@ -41,14 +41,15 @@ function TitleDisplay({ title }: { title: string }) {
 function SortableHeader({
   column,
   children,
-  className
+  className,
+  search
 }: {
   column: TorrentSort | undefined;
   children: React.ReactNode;
   className?: string;
+  search: ListSearch;
 }) {
   const navigate = useNavigate();
-  const search = Route.useSearch();
   const { sort, sort_order } = search;
 
   const isActive = sort === column;
@@ -72,6 +73,7 @@ function SortableHeader({
       newOrder = 'desc';
     }
 
+    console.log('Sorting by:', newSort, newOrder);
     navigate({
       to: '/',
       search: {
@@ -96,7 +98,7 @@ function SortableHeader({
   );
 }
 
-export function TorrentTable({ torrents }: TorrentTableProps) {
+export function TorrentTable({ torrents, search }: TorrentTableProps) {
   return (
     <div>
       <Table style={{ tableLayout: 'fixed' }}>
@@ -104,11 +106,11 @@ export function TorrentTable({ torrents }: TorrentTableProps) {
           <TableRow>
             <TableHead className="w-[150px]">Category</TableHead>
             <TableHead className="truncate">Name</TableHead>
-            <SortableHeader column="size" className="w-[100px]">Size</SortableHeader>
-            <SortableHeader column="date" className="w-[150px]">Date</SortableHeader>
-            <SortableHeader column="seeders" className="w-[70px] text-center">S</SortableHeader>
-            <SortableHeader column="leechers" className="w-[70px] text-center">L</SortableHeader>
-            <SortableHeader column="downloads" className="w-[70px] text-center">C</SortableHeader>
+            <SortableHeader search={search} column="size" className="w-[100px]">Size</SortableHeader>
+            <SortableHeader search={search} column="date" className="w-[150px]">Date</SortableHeader>
+            <SortableHeader search={search} column="seeders" className="w-[70px] text-center">S</SortableHeader>
+            <SortableHeader search={search} column="leechers" className="w-[70px] text-center">L</SortableHeader>
+            <SortableHeader search={search} column="downloads" className="w-[70px] text-center">C</SortableHeader>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -116,9 +118,9 @@ export function TorrentTable({ torrents }: TorrentTableProps) {
             <TableRow key={torrent.guid} className={cn('hover:bg-muted/50', torrent.remake && 'bg-destructive/15', torrent.trusted && 'bg-success/15')}>
               <TableCell className="font-medium">{torrent.category}</TableCell>
               <TableCell className="w-[300px] truncate">
-                <a href={torrent.link} className="text-primary hover:underline">
+                <Link to={torrent.link} className="text-primary hover:underline">
                   <TitleDisplay title={torrent.title} />
-                </a>
+                </Link>
               </TableCell>
               <TableCell><SizeDisplay size={torrent.size} /></TableCell>
               <TableCell><DateDisplay date={torrent.pub_date} /></TableCell>

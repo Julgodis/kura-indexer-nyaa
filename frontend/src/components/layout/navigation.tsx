@@ -6,7 +6,7 @@ export function Navigation() {
         <NavigationMenu>
             <NavigationMenuList>
                 <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
+                    <NavigationMenuLink className={navigationMenuTriggerStyle()} asChild>
                         <Link to="/" search={{}}>
                             Torrents
                         </Link>

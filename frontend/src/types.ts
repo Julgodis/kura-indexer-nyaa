@@ -131,3 +131,17 @@ export type TorrentCategory = z.infer<typeof TorrentCategorySchema>;
 export type TorrentFilter = z.infer<typeof TorrentFilterSchema>;
 export type TorrentSort = z.infer<typeof TorrentSortSchema>;
 export type TorrentSortOrder = z.infer<typeof TorrentSortOrderSchema>;
+
+
+export const ListSearchSchema = z.object({
+    term: z.string().optional(),
+    category: TorrentCategorySchema.optional(),
+    filter: TorrentFilterSchema.optional(),
+    sort: TorrentSortSchema.optional(),
+    sort_order: TorrentSortOrderSchema.optional(),
+    offset: z.number().optional(),
+    limit: z.number().optional(),
+});
+
+export type ListSearch = z.infer<typeof ListSearchSchema>;
+

@@ -12,8 +12,7 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as StatsImport } from './routes/stats'
-import { Route as ListImport } from './routes/_list'
-import { Route as ListIndexImport } from './routes/_list.index'
+import { Route as IndexImport } from './routes/index'
 import { Route as ViewIdImport } from './routes/view.$id'
 
 // Create/Update Routes
@@ -24,15 +23,10 @@ const StatsRoute = StatsImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const ListRoute = ListImport.update({
-  id: '/_list',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const ListIndexRoute = ListIndexImport.update({
+const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ListRoute,
+  getParentRoute: () => rootRoute,
 } as any)
 
 const ViewIdRoute = ViewIdImport.update({
@@ -45,11 +39,11 @@ const ViewIdRoute = ViewIdImport.update({
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_list': {
-      id: '/_list'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof ListImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
     '/stats': {
@@ -66,66 +60,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ViewIdImport
       parentRoute: typeof rootRoute
     }
-    '/_list/': {
-      id: '/_list/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof ListIndexImport
-      parentRoute: typeof ListImport
-    }
   }
 }
 
 // Create and export the route tree
 
-interface ListRouteChildren {
-  ListIndexRoute: typeof ListIndexRoute
-}
-
-const ListRouteChildren: ListRouteChildren = {
-  ListIndexRoute: ListIndexRoute,
-}
-
-const ListRouteWithChildren = ListRoute._addFileChildren(ListRouteChildren)
-
 export interface FileRoutesByFullPath {
-  '': typeof ListRouteWithChildren
+  '/': typeof IndexRoute
   '/stats': typeof StatsRoute
   '/view/$id': typeof ViewIdRoute
-  '/': typeof ListIndexRoute
 }
 
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/stats': typeof StatsRoute
   '/view/$id': typeof ViewIdRoute
-  '/': typeof ListIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
-  '/_list': typeof ListRouteWithChildren
+  '/': typeof IndexRoute
   '/stats': typeof StatsRoute
   '/view/$id': typeof ViewIdRoute
-  '/_list/': typeof ListIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '' | '/stats' | '/view/$id' | '/'
+  fullPaths: '/' | '/stats' | '/view/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/stats' | '/view/$id' | '/'
-  id: '__root__' | '/_list' | '/stats' | '/view/$id' | '/_list/'
+  to: '/' | '/stats' | '/view/$id'
+  id: '__root__' | '/' | '/stats' | '/view/$id'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
-  ListRoute: typeof ListRouteWithChildren
+  IndexRoute: typeof IndexRoute
   StatsRoute: typeof StatsRoute
   ViewIdRoute: typeof ViewIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  ListRoute: ListRouteWithChildren,
+  IndexRoute: IndexRoute,
   StatsRoute: StatsRoute,
   ViewIdRoute: ViewIdRoute,
 }
@@ -140,26 +115,19 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/_list",
+        "/",
         "/stats",
         "/view/$id"
       ]
     },
-    "/_list": {
-      "filePath": "_list.tsx",
-      "children": [
-        "/_list/"
-      ]
+    "/": {
+      "filePath": "index.tsx"
     },
     "/stats": {
       "filePath": "stats.tsx"
     },
     "/view/$id": {
       "filePath": "view.$id.tsx"
-    },
-    "/_list/": {
-      "filePath": "_list.index.tsx",
-      "parent": "/_list"
     }
   }
 }

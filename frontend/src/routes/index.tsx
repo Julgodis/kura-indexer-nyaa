@@ -2,21 +2,11 @@ import { TorrentPagination } from '@/components/torrent/torrent-pagination';
 import { TorrentTable } from '@/components/torrent/torrent-table';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, ErrorComponentProps } from '@tanstack/react-router'
-import { z } from 'zod'
 import { zodValidator } from '@tanstack/zod-adapter'
-import { TorrentCategorySchema, TorrentFilterSchema, TorrentListResponseSchema, TorrentSortOrderSchema, TorrentSortSchema } from '@/types';
+import { ListSearch, ListSearchSchema, TorrentListResponseSchema } from '@/types';
 import { queryClient, urlTransform } from '@/main';
 import { Loader2 } from 'lucide-react';
-
-const torrentParamSchema = z.object({
-  term: z.string().optional(),
-  category: TorrentCategorySchema.optional(),
-  filter: TorrentFilterSchema.optional(),
-  sort: TorrentSortSchema.optional(),
-  sort_order: TorrentSortOrderSchema.optional(),
-  offset: z.number().optional(),
-  limit: z.number().optional(),
-});
+import { SearchForm } from '@/components/search/search-form';
 
 const torrentsQueryOptions = ({
   term,
@@ -26,39 +16,38 @@ const torrentsQueryOptions = ({
   sort_order,
   offset,
   limit,
-}:
-  z.infer<typeof torrentParamSchema>) => queryOptions({
-    queryKey: ['torrents', term, category, filter, sort, sort_order, offset, limit],
-    queryFn: async () => {
-      const response = await fetch(urlTransform("/api/torrents"), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          term,
-          category,
-          filter,
-          sort,
-          sort_order,
-          offset,
-          limit,
-        }),
-      });
+}: ListSearch) => queryOptions({
+  queryKey: ['torrents', term, category, filter, sort, sort_order, offset, limit],
+  queryFn: async () => {
+    const response = await fetch(urlTransform("/api/torrents"), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        term,
+        category,
+        filter,
+        sort,
+        sort_order,
+        offset,
+        limit,
+      }),
+    });
 
-      const data = await response.json();
-      const parsedData = TorrentListResponseSchema.parse(data);
-      return parsedData;
-    },
-  });
+    const data = await response.json();
+    const parsedData = TorrentListResponseSchema.parse(data);
+    return parsedData;
+  },
+});
 
-export const Route = createFileRoute('/_list/')({
+export const Route = createFileRoute('/')({
   component: RouteComponent,
   errorComponent: ErrorComponent,
   pendingComponent: PendingComponent,
-  validateSearch: zodValidator(torrentParamSchema),
+  validateSearch: zodValidator(ListSearchSchema),
   loaderDeps: ({ search }) => ({ search }),
-  loader: ({ deps: { search } }) => queryClient.ensureQueryData(torrentsQueryOptions(search)),
+  loader: async ({ deps: { search } }) => await queryClient.ensureQueryData(torrentsQueryOptions(search)),
 })
 
 function RouteComponent() {
@@ -83,6 +72,7 @@ function RouteComponent() {
   const totalPages = Math.ceil(data.total / limit);
   const onPageChange = (page: number) => {
     const newOffset = (page - 1) * limit;
+    console.log('Page changed to:', page, 'Offset:', newOffset);
     navigate({
       to: '/',
       search: {
@@ -93,7 +83,8 @@ function RouteComponent() {
   };
 
   return <>
-    <TorrentTable torrents={mockTorrents} />
+    <SearchForm search={search} />
+    <TorrentTable search={search} torrents={mockTorrents} />
     <TorrentPagination
       currentPage={currentPage}
       totalPages={totalPages}
@@ -103,16 +94,20 @@ function RouteComponent() {
 }
 
 function PendingComponent() {
+  const search = Route.useSearch();
   return (
-    <div className="flex justify-center items-center min-h-[400px]">
-      <Loader2 className="h-8 w-8 animate-spin" />
-    </div>
+    <><SearchForm search={search} />
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    </>
   );
 }
 
 function ErrorComponent(props: ErrorComponentProps) {
+  const search = Route.useSearch();
   return (
-    <div className="flex justify-center items-center min-h-[400px]">
+    <><SearchForm search={search} /> <div className="flex justify-center items-center min-h-[400px]">
       <Loader2 className="h-8 w-8 animate-spin" />
       <div className="text-center text-destructive">
         Failed to load torrents
@@ -120,6 +115,6 @@ function ErrorComponent(props: ErrorComponentProps) {
       <div className="text-sm text-muted-foreground">
         {props.error.message}
       </div>
-    </div>
+    </div></>
   );
 }
