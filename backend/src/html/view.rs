@@ -1,9 +1,11 @@
 use std::str::FromStr;
 
-use crate::{data, html::parse_size_string};
+use crate::data;
 use anyhow::Context;
 use chrono::TimeZone;
 use scraper::{Html, Selector};
+
+use super::parse_human_size;
 
 pub fn parse(data: &str) -> anyhow::Result<data::View> {
     let data = data.replace("\t", " ").replace("\n", " ");
@@ -66,7 +68,7 @@ pub fn parse(data: &str) -> anyhow::Result<data::View> {
         .ok_or_else(|| anyhow::anyhow!("Failed to parse category value"))?;
 
     let category = data::Category::from_str(category_value)
-        .map_err(|_| anyhow::anyhow!("Invalid category"))?;
+        .context("Invalid category")?;
 
     // Parse file size
     let file_size = parse_file_size(&document)?;
@@ -161,7 +163,7 @@ fn parse_string(document: &Html, label: &str) -> anyhow::Result<String> {
 
 fn parse_file_size(document: &Html) -> anyhow::Result<u64> {
     find_value(document, "File size:")
-        .and_then(|value| parse_size_string(&value).context("Failed to parse file size"))
+        .and_then(|value| parse_human_size(&value).context("Failed to parse file size"))
         .context("Failed to parse file size")
 }
 
@@ -178,8 +180,8 @@ fn parse_files(document: &Html) -> anyhow::Result<Vec<data::File>> {
             let size_part = parts.last().unwrap().trim();
             let size_text = size_part.trim_end_matches(')');
 
-            let size = parse_size_string(size_text)
-                .map_err(|_| anyhow::anyhow!("Failed to parse file size"))?;
+            let size = parse_human_size(size_text)
+                .context(anyhow::anyhow!("Failed to parse file size"))?;
 
             files.push(data::File {
                 id: index.to_string(), // Using index as ID since original IDs aren't provided
@@ -238,7 +240,12 @@ fn parse_comments(document: &Html) -> anyhow::Result<Vec<data::Comment>> {
             .context("Failed to parse date")?;
 
         let edited_date = if edited > 0 {
-            Some(chrono::Utc.timestamp_opt(edited, 0).earliest().context("Failed to parse edited date")?)
+            Some(
+                chrono::Utc
+                    .timestamp_opt(edited, 0)
+                    .earliest()
+                    .context("Failed to parse edited date")?,
+            )
         } else {
             None
         };

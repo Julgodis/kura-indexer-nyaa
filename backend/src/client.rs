@@ -156,7 +156,14 @@ impl Client {
                 ));
             };
 
-            result
+            match result {
+                Ok(data) => 
+                    Ok(data),
+                Err(err) => {
+                    tracing::warn!("unparsable data:\n{:?}", err);
+                    Err(err)
+                }
+            }
         };
 
         match self.retry_fetch(url.clone(), fetch).await {

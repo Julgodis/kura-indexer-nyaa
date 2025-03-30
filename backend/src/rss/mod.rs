@@ -3,7 +3,7 @@ use std::str::FromStr;
 use kura_indexer::api;
 use serde::{Deserialize, Serialize};
 
-use crate::data;
+use crate::{data, html::parse_human_size};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Rss {
@@ -78,37 +78,6 @@ fn parse_boolean(value: &str) -> anyhow::Result<bool> {
     }
 }
 
-fn parse_size(size: &str) -> anyhow::Result<u64> {
-    let size = size.trim();
-    if let Some(size) = size.strip_suffix(" MiB") {
-        let size = size.trim();
-        let size = size
-            .parse::<f64>()
-            .map_err(|_| anyhow::anyhow!("invalid size"))?;
-        return Ok((size * 1024.0 * 1024.0)  as u64);
-    } else if let Some(size) = size.strip_suffix(" GiB") {
-        let size = size.trim();
-        let size = size
-            .parse::<f64>()
-            .map_err(|_| anyhow::anyhow!("invalid size"))?;
-        return Ok((size * 1024.0 * 1024.0 * 1024.0)  as u64);
-    } else if let Some(size) = size.strip_suffix(" KiB") {
-        let size = size.trim();
-        let size = size
-            .parse::<f64>()
-            .map_err(|_| anyhow::anyhow!("invalid size"))?;
-        return Ok((size * 1024.0)  as u64);
-    } else if let Some(size) = size.strip_suffix(" B") {
-        let size = size.trim();
-        let size = size
-            .parse::<f64>()
-            .map_err(|_| anyhow::anyhow!("invalid size"))?;
-        return Ok(size as u64);
-    } else {
-        return Err(anyhow::anyhow!("invalid size"));
-    }
-}
-
 impl Item {
     pub fn to_item(&self) -> anyhow::Result<data::Item> {
         let date =
@@ -118,7 +87,7 @@ impl Item {
 
         let trusted = parse_boolean(&self.trusted)?;
         let remake = parse_boolean(&self.remake)?;
-        let size = parse_size(&self.size)?;
+        let size = parse_human_size(&self.size)?;
 
         Ok(data::Item {
             id: self.guid.clone(),

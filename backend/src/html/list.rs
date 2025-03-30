@@ -5,7 +5,7 @@ use scraper::ElementRef;
 
 use crate::data;
 
-use super::parse_size_string;
+use super::parse_human_size;
 
 fn parse_category(element: &scraper::ElementRef) -> anyhow::Result<data::Category> {
     let a = element
@@ -161,7 +161,7 @@ fn parse_tr(element: scraper::ElementRef) -> anyhow::Result<data::Item> {
         .map(|s| s.contains("success"))
         .unwrap_or(false);
 
-    let size = parse_size_string(&size)?;
+    let size = parse_human_size(&size)?;
     let item = data::Item {
         id: url.clone(),
         title,
