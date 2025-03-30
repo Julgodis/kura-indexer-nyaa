@@ -36,9 +36,12 @@ pub struct NyaaContext {
 
 impl NyaaContext {
     pub fn add_items(&self, items: &[data::Item]) -> anyhow::Result<()> {
-        let db = rusqlite::Connection::open(&self.db_path)?;
+        let start = std::time::Instant::now();
+        
+        let mut db = rusqlite::Connection::open(&self.db_path)?;
+        let tx = db.transaction()?;
 
-        let mut stmt = db.prepare(
+        let mut stmt = tx.prepare(
             r#"
 INSERT INTO items (
     id, title, link, date, 
@@ -70,7 +73,6 @@ INSERT INTO items (
 "#,
         )?;
 
-        let start = std::time::Instant::now();
         for item in items {
             stmt.execute(params![
                 item.id,
@@ -89,6 +91,9 @@ INSERT INTO items (
                 item.magnet_link,
             ])?;
         }
+        drop(stmt);
+
+        tx.commit()?;
 
         let elapsed = start.elapsed();
         tracing::info!("added {} items to the database in {:?}", items.len(), elapsed);
