@@ -32,13 +32,18 @@ export function SearchForm({ search }: { search: ListSearch }) {
     const filterChanged = newFilter !== search.filter;
 
     // Only update the state if any of the values have changed
+    console.log('onSearch', {
+      term: newTerm,
+      category: newCategory,
+      filter: newFilter,
+    }, { term: termChanged, category: categoryChanged, filter: filterChanged });
     if (termChanged || categoryChanged || filterChanged) {
       navigate({
         to: '/',
         search: {
-          term: term,
-          category,
-          filter,
+          term: newTerm,
+          category: newCategory,
+          filter: newFilter,
           sort: search.sort,
           sort_order: search.sort_order,
           offset: 0,
@@ -48,28 +53,27 @@ export function SearchForm({ search }: { search: ListSearch }) {
     }
   };
 
-  useEffect(() => {
-    onSearch(term, category, filter);
-  }
-    , [term, category, filter]);
 
   // Handle category change
   const handleCategoryChange = (value: string) => {
     const newCategory = value as TorrentCategory;
+    setTerm(fieldTerm);
     setCategory(newCategory);
+    onSearch(fieldTerm, newCategory, filter);
   };
 
   // Handle filter change
   const handleFilterChange = (value: string) => {
     const newFilter = value as TorrentFilter;
+    setTerm(fieldTerm);
     setFilter(newFilter);
+    onSearch(fieldTerm, category, newFilter);
   };
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setTerm(fieldTerm);
-    setCategory(category);
-    setFilter(filter);
+    onSearch(fieldTerm, category, filter);
   }
 
   return (

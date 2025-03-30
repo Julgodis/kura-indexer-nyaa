@@ -54,15 +54,7 @@ function RouteComponent() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
 
-  const { data, isFetching } = useSuspenseQuery(torrentsQueryOptions(search));
-
-  if (isFetching) {
-    return <>
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    </>;
-  }
+  const { data } = useSuspenseQuery(torrentsQueryOptions(search));
 
   const limit = search.limit || 75;
   const offset = search.offset || 0;

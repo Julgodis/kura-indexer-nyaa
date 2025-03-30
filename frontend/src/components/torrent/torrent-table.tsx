@@ -73,7 +73,6 @@ function SortableHeader({
       newOrder = 'desc';
     }
 
-    console.log('Sorting by:', newSort, newOrder);
     navigate({
       to: '/',
       search: {
