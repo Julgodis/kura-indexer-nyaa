@@ -11,7 +11,6 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query'
-import { TooltipProvider } from './components/ui/tooltip'
 
 // Create a new router instance
 const router = createRouter({ routeTree })
