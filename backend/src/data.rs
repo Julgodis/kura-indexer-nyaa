@@ -164,34 +164,34 @@ impl Category {
         match self {
             Category::All => "All".to_string(),
             Category::Anime => "Anime".to_string(),
-            Category::AnimeAmv => "Anime AMV".to_string(),
-            Category::AnimeEnglish => "Anime English".to_string(),
-            Category::AnimeNonEnglish => "Anime Non-English".to_string(),
-            Category::AnimeRaw => "Anime Raw".to_string(),
+            Category::AnimeAmv => "Anime - AMV".to_string(),
+            Category::AnimeEnglish => "Anime - English".to_string(),
+            Category::AnimeNonEnglish => "Anime - Non-English".to_string(),
+            Category::AnimeRaw => "Anime - Raw".to_string(),
             Category::Audio => "Audio".to_string(),
-            Category::AudioLossless => "Audio Lossless".to_string(),
-            Category::AudioLossy => "Audio Lossy".to_string(),
+            Category::AudioLossless => "Audio - Lossless".to_string(),
+            Category::AudioLossy => "Audio - Lossy".to_string(),
             Category::Literature => "Literature".to_string(),
-            Category::LiteratureEnglish => "Literature English".to_string(),
-            Category::LiteratureNonEnglish => "Literature Non-English".to_string(),
-            Category::LiteratureRaw => "Literature Raw".to_string(),
+            Category::LiteratureEnglish => "Literature - English".to_string(),
+            Category::LiteratureNonEnglish => "Literature - Non-English".to_string(),
+            Category::LiteratureRaw => "Literature - Raw".to_string(),
             Category::LiveAction => "Live Action".to_string(),
-            Category::LiveActionEnglish => "Live Action English".to_string(),
-            Category::LiveActionIdol => "Live Action Idol".to_string(),
-            Category::LiveActionNonEnglish => "Live Action Non-English".to_string(),
-            Category::LiveActionRaw => "Live Action Raw".to_string(),
+            Category::LiveActionEnglish => "Live Action - English".to_string(),
+            Category::LiveActionIdol => "Live Action - Idol/PV".to_string(),
+            Category::LiveActionNonEnglish => "Live Action - Non-English".to_string(),
+            Category::LiveActionRaw => "Live Action - Raw".to_string(),
             Category::Pictures => "Pictures".to_string(),
-            Category::PicturesGraphics => "Pictures Graphics".to_string(),
-            Category::PicturesPhotos => "Pictures Photos".to_string(),
+            Category::PicturesGraphics => "Pictures - Graphics".to_string(),
+            Category::PicturesPhotos => "Pictures - Photos".to_string(),
             Category::Software => "Software".to_string(),
-            Category::SoftwareApps => "Software Apps".to_string(),
-            Category::SoftwareGames => "Software Games".to_string(),
+            Category::SoftwareApps => "Software - Apps".to_string(),
+            Category::SoftwareGames => "Software - Games".to_string(),
         }
     }
 }
 
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 pub enum Filter {
     #[serde(rename = "0")]
     NoFilter,
@@ -201,7 +201,7 @@ pub enum Filter {
     Trusted,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 pub enum Sort {
     #[serde(rename = "date")]
     Date,
@@ -215,7 +215,7 @@ pub enum Sort {
     Size,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 pub enum SortOrder {
     #[serde(rename = "asc")]
     Ascending,
@@ -253,7 +253,9 @@ pub struct File {
 pub struct Comment {
     pub id: String,
     pub user: String,
+    pub avatar: Option<String>,
     pub date: chrono::DateTime<chrono::Utc>,
+    pub edited: Option<chrono::DateTime<chrono::Utc>>,
     pub content: String,
 }
 
@@ -273,6 +275,9 @@ pub struct View {
     pub download_link: String,
     pub magnet_link: String,
     pub description: String,
+    pub submitter: String,
+    pub info_hash: String,
+    pub info_link: Option<String>,
     pub files: Vec<File>,
     pub comments: Vec<Comment>,
 }

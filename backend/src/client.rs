@@ -6,8 +6,8 @@ use anyhow::{Context, Result};
 use reqwest::{Client as ReqwestClient, ClientBuilder, StatusCode, Url};
 use tokio::sync::Mutex;
 
+use crate::frontend::types::Event;
 use crate::{data, html, rss};
-
 
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -16,173 +16,269 @@ pub struct Client {
     min_interval: Duration,
     /// Protects the timestamp of the last request.
     last_request: Arc<Mutex<Instant>>,
-    db_path: PathBuf
+    db_path: PathBuf,
+    max_retries: usize,
 }
 
 impl Client {
     /// Creates a new Client.
-    ///
-    /// * `requests_per_second` - Maximum number of requests allowed per second.
-    /// * `event_tracker` - Optional callback that receives an Event after each request.
-    pub fn new(min_interval: Duration, db_path: PathBuf) -> Result<Self> {
+    pub fn new(
+        min_interval: Duration,
+        db_path: PathBuf,
+        connect_timeout: Duration,
+        timeout: Duration,
+        max_retries: usize,
+    ) -> Result<Self> {
         let inner = ClientBuilder::new()
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+            .user_agent(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
                          AppleWebKit/537.36 (KHTML, like Gecko) \
-                         Chrome/58.0.3029.110 Safari/537.3")
-            .connect_timeout(Duration::from_secs(10))
-            .timeout(Duration::from_secs(30))
+                         Chrome/58.0.3029.110 Safari/537.3",
+            )
+            .connect_timeout(connect_timeout)
+            .timeout(timeout)
             .build()?;
         Ok(Self {
             inner,
-            // Calculate the minimum interval between requests.
             min_interval,
-            // Initialize with a time far enough in the past so that the first request is not delayed.
-            last_request: Arc::new(Mutex::new(Instant::now() - Duration::from_secs(1) - min_interval)),
+            last_request: Arc::new(Mutex::new(
+                Instant::now() - Duration::from_secs(1) - min_interval,
+            )),
             db_path,
+            max_retries,
         })
     }
 
-    async fn  event_success(&self, url: Url, rate_limited: bool, event_type: &str) {
-        let _ = self.event(url, rate_limited, event_type, "ok").await;
-    }
+    fn event<T>(&self, date: chrono::DateTime<chrono::Utc>, event_type: &str, event_data: T)
+    where
+        T: serde::Serialize,
+    {
+        let result = (|| -> anyhow::Result<()> {
+            let event_data = serde_json::to_string(&event_data)?;
+            let db = rusqlite::Connection::open(&self.db_path)?;
+            db.execute(
+                "INSERT INTO events (date, event_type, event_data) VALUES (?1, ?2, ?3)",
+                rusqlite::params![date, event_type, event_data],
+            )?;
 
-    async fn event_failure(&self, url: Url, rate_limited: bool, event_type: &str) {
-        let _ = self.event(url, rate_limited, event_type, "error").await;
-    }
+            Ok(())
+        })();
 
-    async fn event(&self, url: Url, rate_limited: bool, event_type: &str, status: &str) -> anyhow::Result<()> {
-        tracing::debug!(
-            "Event: {} | URL: {} | Rate limited: {} | Status: {}",
-            event_type,
-            url,
-            rate_limited,
-            status
-        );
-
-        let db = rusqlite::Connection::open(&self.db_path)?;
-        db.execute(
-            "INSERT INTO events (url, rate_limited, event, status) VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![url.as_str(), rate_limited, event_type, status],
-        )?;
-
-        Ok(())
-    }
-
-    /// Fetches data from the given URL, enforcing rate limiting and invoking the event tracker.
-    pub async fn fetch_list(&self, url: Url) -> Result<Vec<data::Item>> {
-        // Enforce the rate limit.
-        let mut rate_limited = false;
-        {
-            let mut last = self.last_request.lock().await;
-            let elapsed = last.elapsed();
-            if elapsed < self.min_interval {
-                tracing::debug!("Rate limited: {}ms", elapsed.as_millis());
-                tokio::time::sleep(self.min_interval - elapsed).await;
-                rate_limited = true;
-            }
-            *last = Instant::now();
+        if let Err(err) = result {
+            tracing::error!("failed to log event: {:?}", err);
         }
+    }
 
-        // Fetch the data.
+    pub async fn fetch_list(&self, url: Url) -> Result<Vec<data::Item>> {
+        self.rate_limit(&url).await;
+
+        let timer = Instant::now();
         let result = self.fetch_list_inner(url.clone()).await;
+        let elapsed = timer.elapsed();
+        self.event(
+            chrono::Utc::now(),
+            "fetch_list",
+            Event::FetchList {
+                url: url.to_string(),
+                error: result.as_ref().err().map(|e| e.to_string()),
+                elapsed: elapsed.as_secs_f64(),
+            },
+        );
         match result {
-            Ok(data) => {
-                self.event_success(url.clone(), rate_limited, "list").await;
-                Ok(data)
-            }
+            Ok(data) => Ok(data),
             Err(err) => {
-                tracing::error!("Failed to fetch data from {}: {:?}", url, err);
-                self.event_failure(url.clone(), rate_limited, "list").await;
+                tracing::error!("failed to fetch data from {}: {:?}", url, err);
                 Err(err)
             }
         }
-
     }
 
-    /// Fetches data from the given URL, enforcing rate limiting and invoking the event tracker.
     async fn fetch_list_inner(&self, url: Url) -> Result<Vec<data::Item>> {
-        let start = Instant::now();
-        let response = self.inner
-            .get(url.clone())
-            .header("Accept", "application/xml, text/html, */*; q=0.9")
-            .send()
-            .await?;
+        let fetch = |url: Url| async move {
+            let response = self
+                .inner
+                .get(url.clone())
+                .header("Accept", "application/xml, text/html, */*; q=0.9")
+                .send()
+                .await?;
 
-        let status = response.status();
-        if !status.is_success() {
-            return Err(anyhow::anyhow!("failed to fetch URL: {}", status));
-        }
+            let status = response.status();
+            if !status.is_success() {
+                return Err(anyhow::anyhow!("failed to fetch URL: {}", status));
+            }
 
-        let content_type = response
-            .headers()
-            .get("Content-Type")
-            .and_then(|v| v.to_str().ok())
-            .context("failed to get content type")?
-            .to_string();
-        tracing::trace!("content type: {}", content_type);
+            let content_type = response
+                .headers()
+                .get("Content-Type")
+                .and_then(|v| v.to_str().ok())
+                .context("failed to get content type")?
+                .to_string();
+            tracing::trace!("content type: {}", content_type);
 
-        let data_text = response.text().await?;
-        tracing::trace!("fetched data: {}", data_text);
+            let data_text = response.text().await?;
+            tracing::trace!("fetched data: {}", data_text);
 
-        let result = if content_type.contains("application/xml") {
-            tracing::trace!("XML content type detected");
-            rss::parse(&data_text)
-        } else if content_type.contains("text/html") {
-            tracing::trace!("HTML content type detected");
-            html::parse_list(&data_text)
-        } else {
-            return Err(anyhow::anyhow!("unsupported content type: {}", content_type));
+            let result = if content_type.contains("application/xml") {
+                tracing::trace!("XML content type detected");
+                rss::parse(&data_text)
+            } else if content_type.contains("text/html") {
+                tracing::trace!("HTML content type detected");
+                html::parse_list(&data_text)
+            } else {
+                return Err(anyhow::anyhow!(
+                    "unsupported content type: {}",
+                    content_type
+                ));
+            };
+
+            result
         };
 
-        result
+        self.retry_fetch(url, fetch).await
     }
 
-    /// Fetches a view from the given URL.
-    pub async fn fetch_view(&self, url: Url) -> Result<data::View> {
-        // Enforce the rate limit.
-        let mut rate_limited = false;
-        {
-            let mut last = self.last_request.lock().await;
-            let elapsed = last.elapsed();
-            if elapsed < self.min_interval {
-                tokio::time::sleep(self.min_interval - elapsed).await;
-                rate_limited = true;
-            }
-            *last = Instant::now();
+    async fn rate_limit(&self, url: &Url) {
+        let mut last = self.last_request.lock().await;
+        let elapsed = last.elapsed();
+        if elapsed < self.min_interval {
+            self.event(
+                chrono::Utc::now(),
+                "rate_limit",
+                Event::RateLimit {
+                    url: url.to_string(),
+                    elapsed: elapsed.as_secs_f64(),
+                    min_interval: self.min_interval.as_secs_f64(),
+                },
+            );
+            tokio::time::sleep(self.min_interval - elapsed).await;
         }
+        *last = Instant::now();
+    }
 
-        // Fetch the data.
+    pub async fn fetch_view(&self, url: Url) -> Result<data::View> {
+        self.rate_limit(&url).await;
+
+        let timer = Instant::now();
         let result = self.fetch_view_inner(url.clone()).await;
+        let elapsed = timer.elapsed();
+        self.event(
+            chrono::Utc::now(),
+            "fetch_view",
+            Event::FetchView {
+                url: url.to_string(),
+                error: result.as_ref().err().map(|e| e.to_string()),
+                elapsed: elapsed.as_secs_f64(),
+            },
+        );
         match result {
-            Ok(data) => {
-                self.event_success(url.clone(), rate_limited, "view").await;
-                Ok(data)
-            }
+            Ok(data) => Ok(data),
             Err(err) => {
-                tracing::error!("Failed to fetch data from {}: {:?}", url, err);
-                self.event_failure(url.clone(), rate_limited, "view").await;
+                tracing::error!("failed to fetch data from {}: {:?}", url, err);
                 Err(err)
+            }
+        }
+    }
+
+    async fn retry_fetch<F, P, R>(&self, url: Url, fetch: F) -> Result<R>
+    where
+        F: Fn(Url) -> P,
+        P: std::future::Future<Output = Result<R>>,
+    {
+        let mut retries = 0;
+        loop {
+            match fetch(url.clone()).await {
+                Ok(data) => return Ok(data),
+                Err(err) => {
+                    if retries >= self.max_retries {
+                        return Err(err);
+                    }
+                    tracing::warn!("failed to fetch data: {:?}", err);
+                    retries += 1;
+                    tokio::time::sleep(Duration::from_secs(1) + self.min_interval).await;
+                    tracing::warn!("retrying... (attempt {})", retries);
+                }
             }
         }
     }
 
     async fn fetch_view_inner(&self, url: Url) -> anyhow::Result<data::View> {
-        let response = self.inner
-            .get(url)
-            .header("Accept", "text/html, */*; q=0.9")
-            .send()
-            .await?;
-    
-        if !response.status().is_success() {
-            return Err(anyhow::anyhow!(
-                "failed to fetch URL: {}",
-                response.status()
-            ));
-        }
-    
-        let data = response.text().await?;
-        tracing::trace!("fetched data: {}", data);
+        let fetch = |url: Url| async move {
+            let response = self
+                .inner
+                .get(url)
+                .header("Accept", "text/html, */*; q=0.9")
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                return Err(anyhow::anyhow!(
+                    "failed to fetch URL: {}",
+                    response.status()
+                ));
+            }
+
+            let data = response.text().await?;
+            tracing::trace!("fetched data: {}", data);
+            html::parse_view(&data)
+        };
+
+        //self.retry_fetch(url, fetch).await
+
+        let data = include_str!("../target/view.html");
         html::parse_view(&data)
     }
-    
+
+    pub async fn download(&self, url: Url) -> Result<(Vec<u8>, String)> {
+        self.rate_limit(&url).await;
+
+        let timer = Instant::now();
+        let result = self.download_inner(url.clone()).await;
+        let elapsed = timer.elapsed();
+        self.event(
+            chrono::Utc::now(),
+            "download",
+            Event::Download {
+                url: url.to_string(),
+                error: result.as_ref().err().map(|e| e.to_string()),
+                elapsed: elapsed.as_secs_f64(),
+            },
+        );
+        match result {
+            Ok(data) => Ok(data),
+            Err(err) => {
+                tracing::error!("failed to download data from {}: {:?}", url, err);
+                Err(err)
+            }
+        }
+    }
+
+    async fn download_inner(&self, url: Url) -> Result<(Vec<u8>, String)> {
+        let fetch = |url: Url| async move {
+            let response = self
+                .inner
+                .get(url)
+                .header("Accept", "*/*; q=0.9")
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                return Err(anyhow::anyhow!(
+                    "failed to fetch URL: {}",
+                    response.status()
+                ));
+            }
+
+            let content_type = response
+                .headers()
+                .get("Content-Type")
+                .and_then(|v| v.to_str().ok())
+                .context("failed to get content type")?
+                .to_string();
+
+            let data = response.bytes().await?;
+            Ok((data.to_vec(), content_type))
+        };
+
+        self.retry_fetch(url, fetch).await
+    }
 }

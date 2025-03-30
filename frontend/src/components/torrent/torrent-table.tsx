@@ -15,14 +15,17 @@ function SizeDisplay({ size }: { size: number }) {
   const sizeInKib = size / 1024;
   const sizeInMiB = sizeInKib / 1024;
   const sizeInGiB = sizeInMiB / 1024;
-  if (sizeInKib < 1024) {
+  const sizeInTiB = sizeInGiB / 1024;
+  if (size < 1024) {
     return <span>{size} B</span>;
-  } else if (sizeInMiB < 1024) {
+  } else if (sizeInKib < 1024) {
     return <span>{sizeInKib.toFixed(2)} KiB</span>;
-  } else if (sizeInGiB < 1024) {
+  } else if (sizeInMiB < 1024) {
     return <span>{sizeInMiB.toFixed(2)} MiB</span>;
-  } else {
+  } else if (sizeInGiB < 1024) {
     return <span>{sizeInGiB.toFixed(2)} GiB</span>;
+  } else {
+    return <span>{sizeInTiB.toFixed(2)} TiB</span>;
   }
 }
 

@@ -104,6 +104,10 @@ pub struct TorrentResponse {
     pub magnet_link: String,
     pub files: Vec<data::File>,
     pub comments: Vec<data::Comment>,
+    pub submitter: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub info_link: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -113,10 +117,32 @@ pub struct TorrentsPerDayItem {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+pub enum Event {
+    RateLimit {
+        url: String,
+        elapsed: f64,
+        min_interval: f64,
+    },
+    FetchList {
+        url: String,
+        error: Option<String>,
+        elapsed: f64,
+    },
+    FetchView {
+        url: String,
+        error: Option<String>,
+        elapsed: f64,
+    },
+    Download {
+        url: String,
+        error: Option<String>,
+        elapsed: f64,
+    },
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct EventItem {
-    pub url: String,
     pub date: chrono::DateTime<chrono::Utc>,
-    pub event: String,
-    pub status: String,
-    pub rate_limited: bool,
+    pub event_type: String,
+    pub event_data: Event,
 }

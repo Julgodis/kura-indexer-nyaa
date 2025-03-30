@@ -20,6 +20,7 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { format } from 'date-fns'
 
 export const Route = createFileRoute('/stats')({
   component: RouteComponent,
@@ -34,11 +35,9 @@ const torrentPerDaySchema = z.array(
 
 const eventsSchema = z.array(
   z.object({
-    url: z.string(),
     date: z.string(),
-    event: z.string(),
-    status: z.string(),
-    rate_limited: z.boolean(),
+    event_type: z.string(),
+    event_data: z.any(),
   }),
 );
 
@@ -80,15 +79,13 @@ function TorrentsPerDay() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
-        <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
+      <CardHeader>
           <CardTitle>Torrent Per Day</CardTitle>
           <CardDescription>
             The number of torrents added per day
           </CardDescription>
-        </div>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
+      <CardContent>
         <ChartContainer
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"
@@ -175,33 +172,27 @@ function Events() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
-        <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
+      <CardHeader>
           <CardTitle>Events</CardTitle>
           <CardDescription>
             The number of events per day
           </CardDescription>
-        </div>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
+      <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-[150px]">Date</TableHead>
               <TableHead className="w-[150px]">Event</TableHead>
-              <TableHead className="w-[150px]">URL</TableHead>
-              <TableHead className="w-[150px]">Status</TableHead>
-              <TableHead className="w-[150px]">Rate Limited</TableHead>
+              <TableHead>Data</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {(query.data ?? []).map((event) => (
               <TableRow key={event.date}>
-                <TableCell>{event.date}</TableCell>
-                <TableCell>{event.event}</TableCell>
-                <TableCell>{event.url}</TableCell>
-                <TableCell>{event.status}</TableCell>
-                <TableCell>{event.rate_limited ? 'Yes' : 'No'}</TableCell>
+                <TableCell>{format(new Date(event.date), 'yyyy-MM-dd HH:mm:ss.SSS')}</TableCell>
+                <TableCell>{event.event_type}</TableCell>
+                <TableCell><pre>{JSON.stringify(event.event_data, null)}</pre></TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -1,88 +1,7 @@
 use serde::Serialize;
 
-#[derive(Serialize, Debug, Clone, Copy)]
-pub enum Category {
-    Anime,
-    Audio,
-    Literature,
-    LiveAction,
-    Pictures,
-    Software,
-}
+use crate::data::{Category, Filter, Sort, SortOrder};
 
-impl Category {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Category::Anime => "1_0",
-            Category::Audio => "2_0",
-            Category::Literature => "3_0",
-            Category::LiveAction => "4_0",
-            Category::Pictures => "5_0",
-            Category::Software => "6_0",
-        }
-    }
-}
-
-impl ToString for Category {
-    fn to_string(&self) -> String {
-        self.as_str().to_string()
-    }
-}
-
-#[derive(Serialize, Debug, Clone, Copy)]
-pub enum Filter {
-    NoFilter = 0,
-    NoRemakes = 1,
-    TrustedOnly = 2,
-}
-
-impl Filter {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Filter::NoFilter => "0",
-            Filter::NoRemakes => "1",
-            Filter::TrustedOnly => "2",
-        }
-    }
-}
-
-#[derive(Serialize, Debug, Clone, Copy)]
-pub enum Sort {
-    Comments = 1,
-    Size = 2,
-    Date = 3,
-    Seeders = 4,
-    Leechers = 5,
-    Downloads = 6,
-}
-
-impl Sort {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Sort::Comments => "1",
-            Sort::Size => "2",
-            Sort::Date => "3",
-            Sort::Seeders => "4",
-            Sort::Leechers => "5",
-            Sort::Downloads => "6",
-        }
-    }
-}
-
-#[derive(Serialize, Debug, Clone, Copy)]
-pub enum Order {
-    Ascending = 1,
-    Descending = 2,
-}
-
-impl Order {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Order::Ascending => "1",
-            Order::Descending => "2",
-        }
-    }
-}
 
 #[derive(Serialize, Debug, Clone)]
 pub struct NyaaUrlBuilder {
@@ -110,7 +29,11 @@ pub struct NyaaUrlBuilder {
     #[serde(rename = "o")]
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    order: Option<Order>,
+    order: Option<SortOrder>,
+    #[serde(rename = "p")]
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    offset: Option<usize>,
 }
 
 impl NyaaUrlBuilder {
@@ -123,11 +46,19 @@ impl NyaaUrlBuilder {
             filter: None,
             sort: None,
             order: None,
+            offset: None,
         }
     }
 
     pub fn with_page(mut self, page: impl AsRef<str>) -> Self {
         self.page = Some(page.as_ref().to_string());
+        self
+    }
+
+    pub fn with_page_option(mut self, page: Option<impl AsRef<str>>) -> Self {
+        if let Some(page) = page {
+            self.page = Some(page.as_ref().to_string());
+        }
         self
     }
 
@@ -141,8 +72,22 @@ impl NyaaUrlBuilder {
         self
     }
 
+    pub fn with_category_option(mut self, category: Option<impl Into<Category>>) -> Self {
+        if let Some(category) = category {
+            self.category = Some(category.into());
+        }
+        self
+    }
+
     pub fn with_filter(mut self, filter: impl Into<Filter>) -> Self {
         self.filter = Some(filter.into());
+        self
+    }
+
+    pub fn with_filter_option(mut self, filter: Option<impl Into<Filter>>) -> Self {
+        if let Some(filter) = filter {
+            self.filter = Some(filter.into());
+        }
         self
     }
 
@@ -151,8 +96,34 @@ impl NyaaUrlBuilder {
         self
     }
 
-    pub fn with_order(mut self, order: impl Into<Order>) -> Self {
+    pub fn with_sort_option(mut self, sort: Option<impl Into<Sort>>) -> Self {
+        if let Some(sort) = sort {
+            self.sort = Some(sort.into());
+        }
+        self
+    }
+
+    pub fn with_order(mut self, order: impl Into<SortOrder>) -> Self {
         self.order = Some(order.into());
+        self
+    }
+
+    pub fn with_order_option(mut self, order: Option<impl Into<SortOrder>>) -> Self {
+        if let Some(order) = order {
+            self.order = Some(order.into());
+        }
+        self
+    }
+
+    pub fn with_offset(mut self, offset: usize) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+
+    pub fn with_offset_option(mut self, offset: Option<usize>) -> Self {
+        if let Some(offset) = offset {
+            self.offset = Some(offset);
+        }
         self
     }
 
@@ -165,8 +136,9 @@ impl NyaaUrlBuilder {
             &self.filter,
             &self.sort,
             &self.order,
+            &self.offset,
         ) {
-            (None, None, None, None, None, None) => self.base_url,
+            (None, None, None, None, None, None, None) => self.base_url,
             _ => format!(
                 "{}/?{}",
                 base_url.trim_end_matches("/"),

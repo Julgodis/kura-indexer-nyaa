@@ -1,12 +1,13 @@
 use std::time::Duration;
 
-use axum::{Extension, Json, extract::Path, response::IntoResponse};
+use axum::{body::Body, extract::Path, response::IntoResponse, Extension, Json};
 use reqwest::{ClientBuilder, StatusCode, Url};
 
 use crate::{
     NyaaContext, data,
     frontend::types::{Torrent, TorrentListResponse, TorrentResponse},
     html,
+    indexer::NyaaMode,
 };
 
 use super::types::{TorrentListRequest, TorrentRequest};
@@ -63,7 +64,7 @@ pub async fn torrents_handler(
                 }
             }
         }
-        (term, category, filter, sort, sort_order, offset, limit) => {
+        (Some(term), category, filter, sort, sort_order, offset, limit) => {
             tracing::info!(
                 "request: term: {:?}, category: {:?}, filter: {:?}, sort: {:?}, offset: {:?}, limit: {:?}",
                 term,
@@ -73,7 +74,89 @@ pub async fn torrents_handler(
                 offset,
                 limit
             );
-            (StatusCode::BAD_REQUEST, "Invalid request").into_response()
+
+            let count = 75usize;
+            let page = offset.map(|o| 1 + (o / count));
+
+            let category = if matches!(category, Some(data::Category::All)) {
+                None
+            } else {
+                category
+            };
+
+            let filter = if matches!(filter, Some(data::Filter::NoFilter)) {
+                None
+            } else {
+                filter
+            };
+
+            let sort = if matches!(sort, Some(data::Sort::Date)) {
+                None
+            } else {
+                sort
+            };
+
+            let sort_order = if matches!(sort_order, Some(data::SortOrder::Descending)) {
+                None
+            } else {
+                sort_order
+            };
+
+            let page = if matches!(page, Some(1)) { None } else { page };
+
+            let link = crate::url::NyaaUrlBuilder::new(&context.base_url)
+                .with_page_option(if context.mode == NyaaMode::Rss {
+                    Some("rss")
+                } else {
+                    None
+                })
+                .with_query(term)
+                .with_category_option(category)
+                .with_filter_option(filter)
+                .with_sort_option(sort)
+                .with_order_option(sort_order)
+                .with_offset_option(page)
+                .build();
+            let url = Url::parse(&link);
+
+            let url = match url {
+                Ok(url) => url,
+                Err(err) => {
+                    tracing::error!("Error: {:?}", err);
+                    return (StatusCode::BAD_REQUEST, "Invalid URL").into_response();
+                }
+            };
+
+            tracing::debug!("request: {:?}", url);
+
+            match context.client.fetch_list(url).await {
+                Ok(response) => {
+                    tracing::trace!("response: {:?}", response);
+                    match context.add_items(&response) {
+                        Ok(_) => {}
+                        Err(err) => {
+                            tracing::error!("Error: {:?}", err);
+                            return (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+                                .into_response();
+                        }
+                    }
+
+                    Json(TorrentListResponse {
+                        torrents: response
+                            .into_iter()
+                            .map(|item| Torrent::from(item))
+                            .collect::<Vec<_>>(),
+                        offset: offset.unwrap_or(0),
+                        count: count,
+                        total: count * 5,
+                    })
+                    .into_response()
+                }
+                Err(err) => {
+                    tracing::error!("Error: {:?}", err);
+                    (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
+                }
+            }
         }
     }
 }
@@ -83,7 +166,7 @@ pub async fn torrent_handler(
     Extension(context): Extension<NyaaContext>,
     Path(request): Path<TorrentRequest>,
 ) -> impl IntoResponse {
-    let link = format!("https://nyaa.si/view/{}", request.id);
+    let link = format!("{}view/{}", context.base_url, request.id);
     let url = Url::parse(&link);
 
     let url = match url {
@@ -101,7 +184,6 @@ pub async fn torrent_handler(
                 guid: response.id,
                 title: response.title,
                 link: response.link,
-                info_hash: "".to_string(),
                 pub_date: response.date.to_rfc2822(),
                 seeders: response.seeders,
                 leechers: response.leechers,
@@ -117,8 +199,49 @@ pub async fn torrent_handler(
                 description_markdown: response.description,
                 files: response.files,
                 comments: response.comments,
+                submitter: response.submitter,
+                info_link: response.info_link,
+                info_hash: response.info_hash,
             };
             (StatusCode::OK, Json(torrent)).into_response()
+        }
+        Err(err) => {
+            tracing::error!("Error: {:?}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
+        }
+    }
+}
+
+#[axum::debug_handler]
+pub async fn download_handler(
+    Extension(context): Extension<NyaaContext>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    tracing::debug!("download request: {:?}", id);
+
+    let url = format!("{}download/{}", context.base_url, id);
+    let url = Url::parse(&url);
+    let url = match url {
+        Ok(url) => url,
+        Err(err) => {
+            tracing::error!("Error: {:?}", err);
+            return (StatusCode::BAD_REQUEST, "Invalid URL").into_response();
+        }
+    };
+
+    let result = context.client.download(url).await;
+    match result {
+        Ok((data, content_type)) => {
+            let body = Body::from(data);
+            let headers = [
+                (axum::http::header::CONTENT_TYPE, content_type),
+                (
+                    axum::http::header::CONTENT_DISPOSITION,
+                    format!("attachment; filename=\"{}\"", id),
+                ),
+            ];
+
+            (headers, body).into_response()
         }
         Err(err) => {
             tracing::error!("Error: {:?}", err);
@@ -157,7 +280,7 @@ pub async fn stats_events(Extension(context): Extension<NyaaContext>) -> impl In
 
     match result {
         Ok(response) => {
-            tracing::debug!("response: {:?}", response);
+            tracing::trace!("response: {:?}", response);
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(err) => {

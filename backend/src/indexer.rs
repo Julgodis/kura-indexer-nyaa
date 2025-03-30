@@ -8,8 +8,21 @@ use kura_indexer::{
     },
     server::Indexer,
 };
+use rusqlite::params;
+use serde::{Deserialize, Serialize};
 
-use crate::{client, data, frontend::types::{EventItem, TorrentsPerDayItem}};
+use crate::{
+    client, data,
+    frontend::types::{Event, EventItem, TorrentsPerDayItem},
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NyaaMode {
+    #[serde(rename = "rss")]
+    Rss,
+    #[serde(rename = "html")]
+    Html,
+}
 
 #[derive(Debug, Clone)]
 pub struct NyaaContext {
@@ -17,10 +30,12 @@ pub struct NyaaContext {
     pub db_path: PathBuf,
     pub event_db_path: PathBuf,
     pub client: client::Client,
+    pub base_url: reqwest::Url,
+    pub mode: NyaaMode,
 }
 
 impl NyaaContext {
-    pub fn add_items(&self, items: Vec<data::Item>) -> anyhow::Result<()> {
+    pub fn add_items(&self, items: &[data::Item]) -> anyhow::Result<()> {
         let db = rusqlite::Connection::open(&self.db_path)?;
 
         let mut stmt = db.prepare(
@@ -56,7 +71,7 @@ INSERT INTO items (
         )?;
 
         for item in items {
-            stmt.execute((
+            stmt.execute(params![
                 item.id,
                 item.title,
                 item.link,
@@ -71,8 +86,10 @@ INSERT INTO items (
                 item.remake,
                 item.download_link,
                 item.magnet_link,
-            ))?;
+            ])?;
         }
+
+        tracing::info!("Added {} items to the database", items.len());
 
         Ok(())
     }
@@ -123,6 +140,12 @@ INSERT INTO items (
         if let Some(x) = category {
             match x {
                 data::Category::All => {}
+                data::Category::Anime => where_clauses.push("category LIKE '1_%'"),
+                data::Category::Audio => where_clauses.push("category LIKE '2_%'"),
+                data::Category::Literature => where_clauses.push("category LIKE '3_%'"),
+                data::Category::LiveAction => where_clauses.push("category LIKE '4_%'"),
+                data::Category::Pictures => where_clauses.push("category LIKE '5_%'"),
+                data::Category::Software => where_clauses.push("category LIKE '6_%'"),
                 _ => {
                     where_clauses.push("category = ?");
                     args.push(&category);
@@ -196,7 +219,9 @@ INSERT INTO items (
         Ok((offset, count, items))
     }
 
-    pub fn get_torrent_per_day(db: &rusqlite::Connection) -> anyhow::Result<Vec<TorrentsPerDayItem>> {
+    pub fn get_torrent_per_day(
+        db: &rusqlite::Connection,
+    ) -> anyhow::Result<Vec<TorrentsPerDayItem>> {
         let mut stmt = db.prepare(
             r#"
 SELECT strftime('%Y-%m-%d', date) AS rounded_date, COUNT(*) AS count
@@ -218,25 +243,24 @@ LIMIT 30;
         Ok(items)
     }
 
-    pub fn get_events(
-        db: &rusqlite::Connection,
-    ) -> anyhow::Result<Vec<EventItem>> {
+    pub fn get_events(db: &rusqlite::Connection) -> anyhow::Result<Vec<EventItem>> {
         let mut stmt = db.prepare(
             r#"
-SELECT url, rate_limited, event, status, date
+SELECT date, event_type, event_data
 FROM events
 ORDER BY date DESC
-LIMIT 100;
+LIMIT 256;
 "#,
         )?;
 
         let items = stmt.query_map([], |row| {
+            let event_data: String = row.get(2)?;
+            let event_data: Event = serde_json::from_str(&event_data)
+                .map_err(|_| rusqlite::types::FromSqlError::InvalidType)?;
             Ok(EventItem {
-                url: row.get(0)?,
-                rate_limited: row.get(1)?,
-                event: row.get(2)?,
-                status: row.get(3)?,
-                date: row.get(4)?,
+                date: row.get(0)?,
+                event_type: row.get::<_, String>(1)?,
+                event_data: event_data,
             })
         })?;
         let items = items.collect::<Result<Vec<_>, _>>()?;

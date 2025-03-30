@@ -10,6 +10,20 @@ pub fn parse(data: &str) -> anyhow::Result<data::View> {
 
     let document = Html::parse_document(&data);
 
+    // Find ID from /download/{}.torrent
+    let download_selector = Selector::parse("a[href^='/download/']").unwrap();
+    let id = document
+        .select(&download_selector)
+        .next()
+        .and_then(|el| el.value().attr("href"))
+        .ok_or_else(|| anyhow::anyhow!("Failed to find download link"))?
+        .split('/')
+        .nth(2)
+        .ok_or_else(|| anyhow::anyhow!("Failed to parse ID from download link"))?
+        .replace(".torrent", "");
+    let id = id.parse::<usize>()?;
+    tracing::debug!("Parsed ID: {}", id);
+
     // Parse title
     let title_selector = Selector::parse(".panel-title").unwrap();
     let title = document
@@ -18,21 +32,6 @@ pub fn parse(data: &str) -> anyhow::Result<data::View> {
         .and_then(|el| el.text().next())
         .ok_or_else(|| anyhow::anyhow!("Failed to find title"))?
         .trim()
-        .to_string();
-
-    // Parse ID from URL or download link
-    let download_selector = Selector::parse("a[href^='/download/']").unwrap();
-    let download_link = document
-        .select(&download_selector)
-        .next()
-        .and_then(|el| el.value().attr("href"))
-        .ok_or_else(|| anyhow::anyhow!("Failed to find download link"))?;
-
-    let id = download_link
-        .split('/')
-        .last()
-        .and_then(|s| s.split('.').next())
-        .ok_or_else(|| anyhow::anyhow!("Failed to parse ID from download link"))?
         .to_string();
 
     // Parse date
@@ -51,11 +50,15 @@ pub fn parse(data: &str) -> anyhow::Result<data::View> {
     let leechers = parse_number(&document, "Leechers:")?;
     let downloads = parse_number(&document, "Completed:")?;
 
+    let submitter = parse_string(&document, "Submitter:")?;
+    let info_link = parse_string(&document, "Information:").ok();
+    let info_hash = parse_string(&document, "Info Hash:")?;
+
     // Parse category
     let category_selector = Selector::parse(".col-md-5 a[href^='/?c=']").unwrap();
     let category_value = document
         .select(&category_selector)
-        .next()
+        .last()
         .and_then(|el| el.value().attr("href"))
         .ok_or_else(|| anyhow::anyhow!("Failed to find category"))?
         .split('=')
@@ -69,8 +72,6 @@ pub fn parse(data: &str) -> anyhow::Result<data::View> {
     let file_size = parse_file_size(&document)?;
 
     // Parse links
-    let full_download_link = format!("https://nyaa.si{}", download_link);
-
     let magnet_selector = Selector::parse("a[href^='magnet:']").unwrap();
     let magnet_link = document
         .select(&magnet_selector)
@@ -97,13 +98,10 @@ pub fn parse(data: &str) -> anyhow::Result<data::View> {
     let trusted = false; // Default value, would need to be extracted from the submitter info
     let remake = false; // Default value, would need to be extracted from specific markers
 
-    // Construct the full URL (this is an assumption, modify as needed)
-    let link = format!("https://nyaa.si/view/{}", id);
-
     Ok(data::View {
-        id,
+        id: format!("/view/{}", id),
         title,
-        link,
+        link: format!("/view/{}", id),
         date,
         seeders,
         leechers,
@@ -112,11 +110,14 @@ pub fn parse(data: &str) -> anyhow::Result<data::View> {
         size: file_size,
         trusted,
         remake,
-        download_link: full_download_link,
         magnet_link,
+        download_link: format!("/download/{}.torrent", id),
         description,
         files,
         comments,
+        submitter,
+        info_hash,
+        info_link,
     })
 }
 
@@ -152,6 +153,10 @@ fn parse_number(document: &Html, label: &str) -> anyhow::Result<usize> {
     find_value(document, label)
         .and_then(|value| value.parse::<usize>().context("Failed to parse number"))
         .context(format!("Failed to parse number for label: {}", label))
+}
+
+fn parse_string(document: &Html, label: &str) -> anyhow::Result<String> {
+    find_value(document, label).context(format!("Failed to parse string for label: {}", label))
 }
 
 fn parse_file_size(document: &Html) -> anyhow::Result<u64> {
@@ -209,14 +214,34 @@ fn parse_comments(document: &Html) -> anyhow::Result<Vec<data::Comment>> {
             .to_string();
 
         let timestamp_selector = Selector::parse("[data-timestamp]").unwrap();
-        let timestamp = comment_element
-            .select(&timestamp_selector)
+        let mut timestamp_it = comment_element.select(&timestamp_selector);
+        let timestamp = timestamp_it
             .next()
             .and_then(|el| el.value().attr("data-timestamp"))
             .unwrap_or("0")
             .parse::<i64>()?;
 
-        let date = chrono::Utc.timestamp_opt(timestamp, 0).unwrap();
+        let edited = if let Some(edited_el) = timestamp_it.next() {
+            edited_el
+                .value()
+                .attr("data-timestamp")
+                .unwrap_or("0")
+                .parse::<i64>()
+                .unwrap_or(0)
+        } else {
+            0
+        };
+
+        let date = chrono::Utc
+            .timestamp_opt(timestamp, 0)
+            .earliest()
+            .context("Failed to parse date")?;
+
+        let edited_date = if edited > 0 {
+            Some(chrono::Utc.timestamp_opt(edited, 0).earliest().context("Failed to parse edited date")?)
+        } else {
+            None
+        };
 
         let content_selector = Selector::parse(".comment-content").unwrap();
         let content = comment_element
@@ -225,11 +250,27 @@ fn parse_comments(document: &Html) -> anyhow::Result<Vec<data::Comment>> {
             .map(|el| el.inner_html())
             .unwrap_or_default();
 
+        let avatar_selector = Selector::parse(".avatar").unwrap();
+        let avatar = comment_element
+            .select(&avatar_selector)
+            .next()
+            .and_then(|el| el.value().attr("src"))
+            .unwrap_or("https://nyaa.si/static/img/avatars/default.png")
+            .to_string();
+
+        let avatar = if avatar.contains("default.png") {
+            None
+        } else {
+            Some(avatar)
+        };
+
         comments.push(data::Comment {
             id,
             user,
             date,
+            edited: edited_date,
             content,
+            avatar,
         });
     }
 

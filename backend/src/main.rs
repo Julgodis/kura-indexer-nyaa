@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, time::Duration};
 
 use clap::Parser;
-use indexer::{NyaaContext, NyaaIndexer};
+use indexer::{NyaaContext, NyaaIndexer, NyaaMode};
 use kura_indexer::server::ServerBuilder;
 use periodic::NyaaPeriodic;
 use reqwest::Url;
@@ -45,11 +45,17 @@ struct KuraConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct NyaaConfig {
     url: String,
+    mode: NyaaMode,
     #[serde(with = "humantime_serde")]
     update_interval: Duration,
     requests_per_window: usize,
     #[serde(with = "humantime_serde")]
     window_size: Duration,
+    #[serde(with = "humantime_serde")]
+    connect_timeout: Duration,
+    #[serde(with = "humantime_serde")]
+    timeout: Duration,
+    max_retries: usize,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -114,14 +120,24 @@ async fn main() {
     } else {
         min_interval
     };
-    let client =
-        client::Client::new(min_interval, event_db_path.clone()).expect("Failed to create client");
+    let client = client::Client::new(
+        min_interval,
+        event_db_path.clone(),
+        config.nyaa.connect_timeout,
+        config.nyaa.timeout,
+        config.nyaa.max_retries,
+    )
+    .expect("Failed to create client");
 
+    let base_url = Url::parse(&config.nyaa.url)
+        .unwrap_or_else(|_| panic!("Failed to parse URL: {}", config.nyaa.url));
     let context = NyaaContext {
         update_interval: config.nyaa.update_interval,
         db_path,
         event_db_path,
         client,
+        base_url: base_url,
+        mode: config.nyaa.mode,
     };
 
     let url = Url::parse(&config.nyaa.url)

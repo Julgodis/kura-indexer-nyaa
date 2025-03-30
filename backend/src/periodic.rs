@@ -38,7 +38,7 @@ impl NyaaPeriodic {
         tracing::trace!("fetched data: {:#?}", data);
         tracing::debug!("found {} items", data.len());
 
-        context.add_items(data)?;
+        context.add_items(&data)?;
         Ok(())
     }
 

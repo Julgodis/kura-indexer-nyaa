@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import {
@@ -13,11 +13,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import { formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { TorrentResponse } from '@/types'
 import Markdown from "react-markdown"
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import React, { ReactNode } from 'react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from '@/components/ui/button'
+import { urlTransform } from '@/main'
 
 const markdownComponents = {
   h3: ({ children }: any) => <h3 className="text-lg font-semibold">{children}</h3>,
@@ -31,7 +35,7 @@ const markdownComponents = {
   p: ({ children }: any) => <p className="my-2">{children}</p>,
   strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
   em: ({ children }: any) => <em className="italic">{children}</em>,
-  a: ({ children, href }: any) => <a href={href} className="text-blue-500 hover:underline">{children}</a>,
+  a: ({ children, href }: any) => <a href={href}>{children}</a>,
   img: ({ src, alt }: any) => <img src={src} alt={alt} className="max-w-full h-auto" />,
   blockquote: ({ children }: any) => <blockquote className="border-l-4 pl-4 italic">{children}</blockquote>,
   ul: ({ children }: any) => <ul className="list-disc pl-5">{children}</ul>,
@@ -56,6 +60,17 @@ export const Route = createFileRoute('/view/$id')({
   }),
   component: RouteComponent,
 })
+
+function InfoElement({ name, children }: { name: string, children?: ReactNode }) {
+  return <>
+    <div className="flex flex-col justify-center items-left">
+      <p className="text-sm text-muted-foreground">{name}</p>
+    </div>
+    <div className="flex flex-col justify-center items-left col-span-2">
+      {children}
+    </div>
+  </>
+}
 
 function RouteComponent() {
   const { torrentId } = Route.useLoaderData()
@@ -91,39 +106,60 @@ function RouteComponent() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl">{torrent.title}</CardTitle>
-              <CardDescription className="mt-2 flex gap-2">
-                <Badge variant="outline">{torrent.category}</Badge>
-                <span>Uploaded {formatDistanceToNow(new Date(torrent.pub_date))} ago by {torrent.uploader}</span>
-              </CardDescription>
-            </div>
-            <a
-              href={torrent.magnet_link}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md"
-            >
-              Magnet Download
-            </a>
+            <CardTitle className="text-2xl">{torrent.title}</CardTitle>
+            <div className="flex-1" />
+            <Button variant="outline" className="ml-2">
+              <a href={torrent.magnet_link} target="_blank" rel="noopener noreferrer">
+                Magnet
+              </a>
+            </Button>
+            <Button variant="outline" className="ml-2">
+              <a href={urlTransform(torrent.download_link)} target="_blank" rel="noopener noreferrer">
+                Download
+              </a>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Size</p>
-              <p className="font-medium">{torrent.size}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Seeders</p>
-              <p className="font-medium text-green-600">{torrent.seeders}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Leechers</p>
-              <p className="font-medium text-red-600">{torrent.leechers}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Downloads</p>
-              <p className="font-medium">{torrent.downloads}</p>
-            </div>
+          <div className="grid grid-cols-6">
+            <InfoElement name="Category">
+              <div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      {torrent.category}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{torrent.category_id}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </InfoElement>
+            <InfoElement name="Date">
+              {format(new Date(torrent.pub_date), 'yyyy-MM-dd HH:mm:ss')}
+            </InfoElement>
+            <InfoElement name="Submitter">
+              {torrent.submitter}
+            </InfoElement>
+            <InfoElement name="Seeders">
+              <span className="text-green-600">{torrent.seeders}</span>
+            </InfoElement>
+            <InfoElement name="Information">
+              {torrent.info_link ? (<a href={torrent.info_link} target="_blank" rel="noopener noreferrer">{torrent.info_link}</a>) : 'N/A'}
+            </InfoElement>
+            <InfoElement name="Leechers">
+              <span className="text-red-600">{torrent.leechers}</span>
+            </InfoElement>
+            <InfoElement name="File size">
+              {torrent.size}
+            </InfoElement>
+            <InfoElement name="Completed">
+              {torrent.downloads}
+            </InfoElement>
+            <InfoElement name="Info hash">
+              <pre className="text-muted-foreground">{torrent.info_hash}</pre>
+            </InfoElement>
           </div>
         </CardContent>
       </Card>

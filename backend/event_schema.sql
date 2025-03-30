@@ -1,11 +1,9 @@
 
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    url TEXT NOT NULL,
     date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    event TEXT NOT NULL,
-    status TEXT NOT NULL,
-    rate_limited INTEGER NOT NULL
+    event_type TEXT NOT NULL,
+    event_data TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_events_date ON events(date DESC);

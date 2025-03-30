@@ -86,9 +86,10 @@ export const TorrentResponseSchema = z.object({
     remake: z.boolean(),
     description: z.string(),
     description_markdown: z.string(),
-    uploader: z.string(),
+    submitter: z.string(),
+    info_link: z.string().optional(),
     magnet_link: z.string(),
-    downoad_link: z.string(),
+    download_link: z.string(),
     files: z.array(z.object({
         name: z.string(),
         size: z.string(),

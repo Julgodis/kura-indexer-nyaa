@@ -11,6 +11,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query'
+import { TooltipProvider } from './components/ui/tooltip'
 
 // Create a new router instance
 const router = createRouter({ routeTree })
@@ -33,3 +34,12 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>,
 )
+
+
+export function urlTransform(url: string) {
+  const baseUrl = import.meta.env.VITE_API_URL
+  if (url.startsWith("/")) {
+    url = baseUrl + url.slice(1)
+  }
+  return url
+}

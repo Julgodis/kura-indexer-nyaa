@@ -132,3 +132,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+a {
+  @apply text-blue-500 hover:underline;
+}
+a:hover {
+  @apply text-blue-500/80;
+}
