@@ -80,29 +80,43 @@ impl Client {
         let timer = Instant::now();
         let result = self.fetch_list_inner(url.clone()).await;
         let elapsed = timer.elapsed();
-        self.event(
-            chrono::Utc::now(),
-            "fetch_list",
-            Event::FetchList {
-                url: url.to_string(),
-                error: result.as_ref().err().map(|e| e.to_string()),
-                elapsed: elapsed.as_secs_f64(),
-                item_count: Some(result.as_ref().map(|v| v.len()).unwrap_or(0)),
-            },
-        );
         match result {
-            Ok(data) => Ok(data),
+            Ok((data, cached)) => {
+                self.event(
+                    chrono::Utc::now(),
+                    "fetch_list",
+                    Event::FetchList {
+                        url: url.to_string(),
+                        error: None,
+                        elapsed: elapsed.as_secs_f64(),
+                        item_count: Some(data.len()),
+                        cached: Some(cached),
+                    },
+                );
+                Ok(data)
+            }
             Err(err) => {
                 tracing::error!("failed to fetch data from {}: {:?}", url, err);
+                self.event(
+                    chrono::Utc::now(),
+                    "fetch_list",
+                    Event::FetchList {
+                        url: url.to_string(),
+                        error: Some(err.to_string()),
+                        elapsed: elapsed.as_secs_f64(),
+                        item_count: None,
+                        cached: None,
+                    },
+                );
                 Err(err)
             }
         }
     }
 
-    async fn fetch_list_inner(&self, url: Url) -> Result<Vec<data::Item>> {
+    async fn fetch_list_inner(&self, url: Url) -> Result<(Vec<data::Item>, bool)> {
         if let Some(result) = self.cache.lock().await.get::<Vec<data::Item>>(&url) {
             tracing::debug!("cache hit for URL: {}", url);
-            return Ok(result);
+            return Ok((result, true));
         }
 
         let fetch = |url: Url| async move {
@@ -151,7 +165,7 @@ impl Client {
                     .lock()
                     .await
                     .put(&url, Duration::from_secs(60), &data)?;
-                Ok(data)
+                Ok((data, false))
             }
             Err(err) => {
                 tracing::error!("failed to fetch data: {:?}", err);
@@ -182,19 +196,32 @@ impl Client {
         let timer = Instant::now();
         let result = self.fetch_view_inner(url.clone()).await;
         let elapsed = timer.elapsed();
-        self.event(
-            chrono::Utc::now(),
-            "fetch_view",
-            Event::FetchView {
-                url: url.to_string(),
-                error: result.as_ref().err().map(|e| e.to_string()),
-                elapsed: elapsed.as_secs_f64(),
-            },
-        );
         match result {
-            Ok(data) => Ok(data),
+            Ok((data, cached)) => {
+                self.event(
+                    chrono::Utc::now(),
+                    "fetch_view",
+                    Event::FetchView {
+                        url: url.to_string(),
+                        error: None,
+                        elapsed: elapsed.as_secs_f64(),
+                        cached: Some(cached),
+                    },
+                );
+                Ok(data)
+            }
             Err(err) => {
                 tracing::error!("failed to fetch data from {}: {:?}", url, err);
+                self.event(
+                    chrono::Utc::now(),
+                    "fetch_view",
+                    Event::FetchView {
+                        url: url.to_string(),
+                        error: Some(err.to_string()),
+                        elapsed: elapsed.as_secs_f64(),
+                        cached: None,
+                    },
+                );
                 Err(err)
             }
         }
@@ -224,10 +251,10 @@ impl Client {
         }
     }
 
-    async fn fetch_view_inner(&self, url: Url) -> anyhow::Result<data::View> {
+    async fn fetch_view_inner(&self, url: Url) -> anyhow::Result<(data::View, bool)> {
         if let Some(result) = self.cache.lock().await.get::<data::View>(&url) {
             tracing::debug!("cache hit for URL: {}", url);
-            return Ok(result);
+            return Ok((result, true));
         }
 
         let fetch = |url: Url| async move {
@@ -257,7 +284,7 @@ impl Client {
                     .lock()
                     .await
                     .put(&url, Duration::from_secs(10 * 60), &data)?;
-                Ok(data)
+                Ok((data, false))
             }
             Err(err) => {
                 tracing::error!("failed to fetch data: {:?}", err);
@@ -270,28 +297,41 @@ impl Client {
         let timer = Instant::now();
         let result = self.download_inner(url.clone()).await;
         let elapsed = timer.elapsed();
-        self.event(
-            chrono::Utc::now(),
-            "download",
-            Event::Download {
-                url: url.to_string(),
-                error: result.as_ref().err().map(|e| e.to_string()),
-                elapsed: elapsed.as_secs_f64(),
-            },
-        );
         match result {
-            Ok(data) => Ok(data),
+            Ok((data, cached)) => {
+                self.event(
+                    chrono::Utc::now(),
+                    "download",
+                    Event::Download {
+                        url: url.to_string(),
+                        error: None,
+                        elapsed: elapsed.as_secs_f64(),
+                        cached: Some(cached),
+                    },
+                );
+                Ok(data)
+            }
             Err(err) => {
                 tracing::error!("failed to download data from {}: {:?}", url, err);
+                self.event(
+                    chrono::Utc::now(),
+                    "download",
+                    Event::Download {
+                        url: url.to_string(),
+                        error: Some(err.to_string()),
+                        elapsed: elapsed.as_secs_f64(),
+                        cached: None,
+                    },
+                );
                 Err(err)
             }
         }
     }
 
-    async fn download_inner(&self, url: Url) -> Result<(Vec<u8>, String)> {
+    async fn download_inner(&self, url: Url) -> Result<((Vec<u8>, String), bool)> {
         if let Some(result) = self.cache.lock().await.get::<(Vec<u8>, String)>(&url) {
             tracing::debug!("cache hit for URL: {}", url);
-            return Ok(result);
+            return Ok((result, true));
         }
 
         let fetch = |url: Url| async move {
@@ -326,7 +366,7 @@ impl Client {
                     .lock()
                     .await
                     .put(&url, Duration::from_secs(10 * 60), &data)?;
-                Ok(data)
+                Ok((data, false))
             }
             Err(err) => {
                 tracing::error!("failed to download data: {:?}", err);

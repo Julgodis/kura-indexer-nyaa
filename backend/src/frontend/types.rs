@@ -130,16 +130,25 @@ pub enum Event {
         #[serde(default)]
         #[serde(skip_serializing_if = "Option::is_none")]
         item_count: Option<usize>,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        cached: Option<bool>,
     },
     FetchView {
         url: String,
         error: Option<String>,
         elapsed: f64,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        cached: Option<bool>,
     },
     Download {
         url: String,
         error: Option<String>,
         elapsed: f64,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        cached: Option<bool>,
     },
 }
 

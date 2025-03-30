@@ -1,11 +1,12 @@
 import { SearchForm } from '@/components/search/search-form';
 import { TorrentPagination } from '@/components/torrent/torrent-pagination';
 import { TorrentTable } from '@/components/torrent/torrent-table';
-import { useQuery } from '@tanstack/react-query';
+import { QueryClient, queryOptions, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { TorrentCategorySchema, TorrentFilterSchema, TorrentListResponseSchema, TorrentSortOrderSchema, TorrentSortSchema } from '@/types';
+import { queryClient, urlTransform } from '@/main';
 
 const torrentParamSchema = z.object({
   term: z.string().optional(),
@@ -17,33 +18,31 @@ const torrentParamSchema = z.object({
   limit: z.number().optional(),
 });
 
-export const Route = createFileRoute('/')({
-  component: RouteComponent,
-  errorComponent: () => <div>Error</div>,
-  validateSearch: zodValidator(torrentParamSchema),
-})
-
-function RouteComponent() {
-  const search = Route.useSearch();
-  const navigate = Route.useNavigate();
-
-  const url = import.meta.env.VITE_API_URL;
-  const query = useQuery({
-    queryKey: ['torrents', search.term, search.category, search.filter, search.sort, search.sort_order, search.offset, search.limit],
+const torrentsQueryOptions = ({
+  term,
+  category,
+  filter,
+  sort,
+  sort_order,
+  offset,
+  limit,
+}:
+  z.infer<typeof torrentParamSchema>) => queryOptions({
+    queryKey: ['torrents', term, category, filter, sort, sort_order, offset, limit],
     queryFn: async () => {
-      const response = await fetch(`${url}api/torrents`, {
+      const response = await fetch(urlTransform("/api/torrents"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          term: search.term,
-          category: search.category,
-          filter: search.filter,
-          sort: search.sort,
-          sort_order: search.sort_order,
-          offset: search.offset,
-          limit: search.limit,
+          term,
+          category,
+          filter,
+          sort,
+          sort_order,
+          offset,
+          limit,
         }),
       });
 
@@ -51,14 +50,27 @@ function RouteComponent() {
       const parsedData = TorrentListResponseSchema.parse(data);
       return parsedData;
     },
-    initialData: { torrents: [], offset: 0, count: 0, total: 0 },
   });
+
+export const Route = createFileRoute('/')({
+  component: RouteComponent,
+  errorComponent: () => <div>Error</div>,
+  validateSearch: zodValidator(torrentParamSchema),
+  loaderDeps: ({ search }) => ({ search }),
+  loader: ({ deps: { search } }) => queryClient.ensureQueryData(torrentsQueryOptions(search)),
+})
+
+function RouteComponent() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+
+  const query = useSuspenseQuery(torrentsQueryOptions(search));
 
   if (query.isLoading) {
     return <div>Loading...</div>;
   }
   if (query.isError) {
-    return <div>Error: {query.error.message}</div>;
+    return <div>Error: {query.error?.message}</div>;
   }
 
   const limit = search.limit || 75;
