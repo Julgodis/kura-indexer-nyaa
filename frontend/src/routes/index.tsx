@@ -1,7 +1,7 @@
 import { SearchForm } from '@/components/search/search-form';
 import { TorrentPagination } from '@/components/torrent/torrent-pagination';
 import { TorrentTable } from '@/components/torrent/torrent-table';
-import { QueryClient, queryOptions, useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { zodValidator } from '@tanstack/zod-adapter'

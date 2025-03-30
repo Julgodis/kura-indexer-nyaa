@@ -1,5 +1,5 @@
 import { Navigation } from './navigation';
-import nyaaLogoUrl from '../../assets/nyaa.png';
+import nyaaLogoUrl from '@/assets/nyaa.png';
 
 export function Header() {
     return (

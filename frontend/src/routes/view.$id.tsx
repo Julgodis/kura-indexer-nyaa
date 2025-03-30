@@ -20,6 +20,7 @@ import { ReactNode } from 'react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { urlTransform } from '@/main'
+import nyaaLogoUrl from '@/assets/nyaa.png'
 
 const markdownComponents = {
   h3: ({ children }: any) => <h3 className="text-lg font-semibold">{children}</h3>,
@@ -218,7 +219,7 @@ function RouteComponent() {
                     <div key={comment.id} className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Avatar>
-                          <img src={comment.avatar} alt={comment.user} />
+                          <img src={comment.avatar ?? nyaaLogoUrl} alt={comment.user} />
                         </Avatar>
                         <div>
                           <p className="font-medium">{comment.user}</p>
