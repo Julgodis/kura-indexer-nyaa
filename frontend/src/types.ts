@@ -3,11 +3,28 @@ import { z } from "zod";
 export const TorrentCategorySchema = z.enum([
     "0_0",
     "1_0",
+    "1_1",
+    "1_2",
+    "1_3",
+    "1_4",
     "2_0",
+    "2_1",
+    "2_2",
     "3_0",
+    "3_1",
+    "3_2",
+    "3_3",
     "4_0",
+    "4_1",
+    "4_2",
+    "4_3",
+    "4_4",
     "5_0",
+    "5_1",
+    "5_2",
     "6_0",
+    "6_1",
+    "6_2",
 ]);
 
 export const TorrentFilterSchema = z.enum([

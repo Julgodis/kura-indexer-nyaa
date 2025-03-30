@@ -25,8 +25,7 @@ export function SearchForm() {
     if (search.filter) {
       setFilter(search.filter);
     }
-  }
-    , [search.term, search.category, search.filter]);
+  }, [search.term, search.category, search.filter]);
 
   const onSearch = () => {
     navigate({
@@ -41,15 +40,45 @@ export function SearchForm() {
         limit: 75,
       },
     });
-  }
+  };
+
+  // Handle form submission on Enter key
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      onSearch();
+    }
+  };
+
+  // Handle category change
+  const handleCategoryChange = (value: string) => {
+    const newCategory = value as TorrentCategory;
+    setCategory(newCategory);
+    onSearch();
+  };
+
+  // Handle filter change
+  const handleFilterChange = (value: string) => {
+    const newFilter = value as TorrentFilter;
+    setFilter(newFilter);
+    onSearch();
+  };
 
   return (
     <div className="rounded-lg shadow p-4 mb-6">
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-[200px]">
-          <Input type="text" placeholder="Search..." value={term} onChange={(e) => setTerm(e.target.value)} />
+          <Input 
+            type="text" 
+            placeholder="Search..." 
+            value={term} 
+            onChange={(e) => setTerm(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
         </div>
-        <Select value={category} onValueChange={(value) => setCategory(value as TorrentCategory)}>
+        <Select 
+          value={category} 
+          onValueChange={handleCategoryChange}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
@@ -86,7 +115,10 @@ export function SearchForm() {
             <SelectItem value="6_2">Software - Games</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filter} onValueChange={(value) => setFilter(value as TorrentFilter)}>
+        <Select 
+          value={filter} 
+          onValueChange={handleFilterChange}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter" />
           </SelectTrigger>
