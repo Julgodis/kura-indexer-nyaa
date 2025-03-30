@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { TorrentCategorySchema, TorrentFilterSchema, TorrentListResponseSchema, TorrentSortOrderSchema, TorrentSortSchema } from '@/types';
 import { queryClient, urlTransform } from '@/main';
+import { Loader2 } from 'lucide-react';
 
 const torrentParamSchema = z.object({
   term: z.string().optional(),
@@ -64,21 +65,23 @@ function RouteComponent() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
 
-  const query = useSuspenseQuery(torrentsQueryOptions(search));
+  const { data, isFetching } = useSuspenseQuery(torrentsQueryOptions(search));
 
-  if (query.isLoading) {
-    return <div>Loading...</div>;
-  }
-  if (query.isError) {
-    return <div>Error: {query.error?.message}</div>;
+  if (isFetching) {
+    return <>
+      <SearchForm />
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    </>;
   }
 
   const limit = search.limit || 75;
   const offset = search.offset || 0;
 
-  const mockTorrents = query.data.torrents;
+  const mockTorrents = data.torrents;
   const currentPage = Math.floor(offset / limit) + 1;
-  const totalPages = Math.ceil(query.data.total / limit);
+  const totalPages = Math.ceil(data.total / limit);
   const onPageChange = (page: number) => {
     const newOffset = (page - 1) * limit;
     navigate({
@@ -98,6 +101,5 @@ function RouteComponent() {
       totalPages={totalPages}
       onPageChange={onPageChange}
     />
-
   </>;
 } 
