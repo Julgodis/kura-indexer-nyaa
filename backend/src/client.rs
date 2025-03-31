@@ -23,6 +23,8 @@ pub struct Client {
     last_request: Arc<Mutex<Instant>>,
     db_path: PathBuf,
     max_retries: usize,
+    local_address: Option<IpAddr>,
+    interface: Option<String>,
     cache: Arc<Mutex<Cache>>,
 }
 
@@ -47,10 +49,10 @@ impl Client {
             .connect_timeout(connect_timeout)
             .timeout(timeout);
 
-        if let Some(addr) = local_address {
-            inner = inner.local_address(addr);
-        } else if let Some(iface) = interface {
-            inner = inner.interface(&iface);
+        if let Some(addr) = &local_address {
+            inner = inner.local_address(*addr);
+        } else if let Some(iface) = &interface {
+            inner = inner.interface(iface);
         }
 
         let inner = inner.build()?;
@@ -62,8 +64,33 @@ impl Client {
             )),
             db_path,
             max_retries,
+            local_address,
+            interface,
             cache: Arc::new(Mutex::new(Cache::new(cache_path, 16 * 1024 * 1024)?)),
         })
+    }
+
+    fn new_client(&self) -> Result<ReqwestClient> {
+        let mut inner = ClientBuilder::new()
+            .user_agent(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+                         AppleWebKit/537.36 (KHTML, like Gecko) \
+                         Chrome/58.0.3029.110 Safari/537.3",
+            );
+
+        if let Some(addr) = &self.local_address {
+            inner = inner.local_address(*addr);
+        } else if let Some(iface) = &self.interface {
+            inner = inner.interface(iface);
+        }
+
+        let inner = inner.build()?;
+        Ok(inner)
+    }
+
+    fn reuse_client(&self) -> Result<ReqwestClient> {
+        let inner = self.inner.clone();
+        Ok(inner)
     }
 
     fn event<T>(&self, date: chrono::DateTime<chrono::Utc>, event_type: &str, event_data: T)
@@ -131,7 +158,7 @@ impl Client {
 
         let fetch = |url: Url| async move {
             let response = self
-                .inner
+                .new_client()
                 .get(url.clone())
                 .header("Accept", "application/xml, text/html, */*; q=0.9")
                 .send()
@@ -275,7 +302,7 @@ impl Client {
 
         let fetch = |url: Url| async move {
             let response = self
-                .inner
+                .new_client()
                 .get(url)
                 .header("Accept", "text/html, */*; q=0.9")
                 .send()
@@ -352,7 +379,7 @@ impl Client {
 
         let fetch = |url: Url| async move {
             let response = self
-                .inner
+                .new_client()
                 .get(url)
                 .header("Accept", "*/*; q=0.9")
                 .send()

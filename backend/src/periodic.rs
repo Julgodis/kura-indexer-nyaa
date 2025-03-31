@@ -50,6 +50,9 @@ impl NyaaPeriodic {
             Ok(_) => {}
             Err(e) => {
                 tracing::error!("error fetching data: {:?}", e);
+                for chain in e.chain() {
+                    tracing::error!("  caused by: {}", chain);
+                }
             }
         }
     }
