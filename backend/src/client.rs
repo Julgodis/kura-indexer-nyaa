@@ -158,7 +158,7 @@ impl Client {
 
         let fetch = |url: Url| async move {
             let response = self
-                .new_client()
+                .new_client()?
                 .get(url.clone())
                 .header("Accept", "application/xml, text/html, */*; q=0.9")
                 .send()
@@ -302,7 +302,7 @@ impl Client {
 
         let fetch = |url: Url| async move {
             let response = self
-                .new_client()
+                .new_client()?
                 .get(url)
                 .header("Accept", "text/html, */*; q=0.9")
                 .send()
@@ -379,7 +379,7 @@ impl Client {
 
         let fetch = |url: Url| async move {
             let response = self
-                .new_client()
+                .new_client()?
                 .get(url)
                 .header("Accept", "*/*; q=0.9")
                 .send()
