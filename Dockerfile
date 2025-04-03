@@ -6,7 +6,7 @@ FROM backend-base AS backend-base-chef
 RUN cargo install cargo-chef
 
 FROM backend-base-chef AS backend-planner
-COPY backend .
+COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM backend-base-chef AS backend-build
