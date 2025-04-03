@@ -24,6 +24,12 @@ pub struct ApiConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NyaaConfig {
     pub url: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interface: Option<String>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local_addr: Option<String>,
     #[serde(with = "humantime_serde")]
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]

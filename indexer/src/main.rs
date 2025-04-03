@@ -115,6 +115,8 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap_or(std::time::Duration::from_secs(60)),
         ))
         .request_tracker(request_tracker.clone())
+        .local_addr(config.nyaa.local_addr.clone())
+        .interface(config.nyaa.interface.clone())
         .build();
     let client = Arc::new(Mutex::new(client));
 

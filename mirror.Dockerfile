@@ -33,7 +33,6 @@ FROM backend-base-chef AS backend-build
 COPY --from=backend-planner /usr/src/app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
-COPY --from=frontend-build /usr/src/app/dist /usr/src/frontend/dist
 RUN cargo build --release
 
 FROM ubuntu:24.04 AS base
@@ -45,5 +44,7 @@ RUN apt-get update && apt-get install -y \
 
 FROM base AS final
 COPY --from=backend-build /usr/src/app/target/release/nyaa-mirror nyaa-mirror
+COPY --from=frontend-build /usr/src/app/dist /dist
+
 
 ENTRYPOINT ["/usr/src/app/nyaa-mirror", "--config", "/config/nyaa-mirror.toml"]

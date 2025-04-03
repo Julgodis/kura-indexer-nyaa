@@ -60,6 +60,8 @@ impl ListQuery {
 
 pub struct Client {
     url: Url,
+    interface: Option<String>,
+    local_addr: Option<String>,
     user_agent: String,
     timeout: Duration,
     cache: Arc<Mutex<Cache>>,
@@ -88,12 +90,23 @@ impl Client {
         self.rate_limiter.acquire().await;
 
         let url = self.url.clone();
-        let client = reqwest::Client::builder()
+        let mut client = reqwest::Client::builder()
             .connection_verbose(true)
             .user_agent(self.user_agent.clone())
-            .timeout(self.timeout)
-            .build()
-            .context("failed to build HTTP client")?;
+            .timeout(self.timeout);
+
+        if let Some(local_addr) = &self.local_addr {
+            client = client.local_address(Some(
+                local_addr
+                    .parse()
+                    .context("failed to parse local address")?,
+            ));
+        }
+        if let Some(interface) = &self.interface {
+            client = client.interface(interface);
+        }
+
+        let client = client.build().context("failed to build HTTP client")?;
 
         let response = client
             .get(url.clone())
@@ -138,12 +151,10 @@ impl Client {
                 .as_ref()
                 .map(|tracker| tracker.track_request(&url, &query, true, elapsed_time));
 
-            self.cache.lock().await.put(
-                &url,
-                query,
-                Duration::from_secs(60 * 60 * 24),
-                &result,
-            );
+            self.cache
+                .lock()
+                .await
+                .put(&url, query, Duration::from_secs(60 * 60 * 24), &result);
             return Ok(result);
         } else {
             let error_body = response
@@ -179,12 +190,23 @@ impl Client {
         self.rate_limiter.acquire().await;
 
         let url = self.url.join(&format!("/view/{}", id))?;
-        let client = reqwest::Client::builder()
+        let mut client = reqwest::Client::builder()
             .connection_verbose(true)
             .user_agent(self.user_agent.clone())
-            .timeout(self.timeout)
-            .build()
-            .context("failed to build HTTP client")?;
+            .timeout(self.timeout);
+
+        if let Some(local_addr) = &self.local_addr {
+            client = client.local_address(Some(
+                local_addr
+                    .parse()
+                    .context("failed to parse local address")?,
+            ));
+        }
+        if let Some(interface) = &self.interface {
+            client = client.interface(interface);
+        }
+
+        let client = client.build().context("failed to build HTTP client")?;
 
         let response = client
             .get(url.clone())
@@ -241,6 +263,8 @@ impl Client {
 
 pub struct ClientBuilder {
     url: Url,
+    interface: Option<String>,
+    local_addr: Option<String>,
     user_agent: String,
     timeout: Duration,
     cache_dir: PathBuf,
@@ -259,6 +283,8 @@ impl ClientBuilder {
             cache_size: 64 * 1024 * 1024,
             rate_limiter: RateLimiter::new(10, Duration::from_secs(1)),
             request_tracker: None,
+            interface: None,
+            local_addr: None,
         }
     }
 
@@ -287,10 +313,17 @@ impl ClientBuilder {
         self
     }
 
-    pub fn request_tracker(
-        mut self,
-        request_tracker: RequestTracker,
-    ) -> Self {
+    pub fn local_addr(mut self, local_addr: impl Into<Option<String>>) -> Self {
+        self.local_addr = local_addr.into();
+        self
+    }
+
+    pub fn interface(mut self, interface: impl Into<Option<String>>) -> Self {
+        self.interface = interface.into();
+        self
+    }
+
+    pub fn request_tracker(mut self, request_tracker: RequestTracker) -> Self {
         self.request_tracker = Some(request_tracker);
         self
     }
@@ -300,6 +333,8 @@ impl ClientBuilder {
         let cache = Arc::new(Mutex::new(cache));
         Client {
             url: self.url,
+            interface: self.interface,
+            local_addr: self.local_addr,
             user_agent: self.user_agent,
             timeout: self.timeout,
             cache,
