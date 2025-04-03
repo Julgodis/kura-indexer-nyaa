@@ -2,3 +2,4 @@
 .vscode
 nyaa-indexer.db
 nyaa-indexer.toml
+nyaa-mirror.toml

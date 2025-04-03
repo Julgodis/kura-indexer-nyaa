@@ -1,0 +1,11 @@
+[package]
+name = "nyaa-parser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = "2.0.12"
+chrono = { version = "0.4.40", features = ["serde"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde-xml-rs = "0.6.0"
+scraper = "0.23.1"
