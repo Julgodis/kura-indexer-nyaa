@@ -12,7 +12,7 @@ RUN cd /temp/prod && bun install --frozen-lockfile --production
 
 FROM frontend-base AS frontend-build
 COPY --from=frontend-install /temp/dev/node_modules node_modules
-COPY frontend/ .
+COPY mirror/frontend/ .
 
 ENV NODE_ENV=production
 ENV VITE_API_URL=/
