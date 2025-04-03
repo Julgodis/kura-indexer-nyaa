@@ -25,4 +25,4 @@ RUN apt-get update && apt-get install -y \
 FROM base AS final
 COPY --from=backend-build /usr/src/app/target/release/kura-indexer-nyaa kura-indexer-nyaa
 
-ENTRYPOINT ["/usr/src/app/kura-indexer-nya", "--config", "/config/nyaa-indexer.toml"]
+ENTRYPOINT ["/usr/src/app/kura-indexer-nyaa", "--config", "/config/nyaa-indexer.toml"]
