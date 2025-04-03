@@ -44,6 +44,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS final
-COPY --from=backend-build /usr/src/app/target/release/nyaa-mirror kura-indexer-nyaa
+COPY --from=backend-build /usr/src/app/target/release/nyaa-mirror nyaa-mirror
 
 ENTRYPOINT ["/usr/src/app/nyaa-mirror", "--config", "/config/nyaa-mirror.toml"]
