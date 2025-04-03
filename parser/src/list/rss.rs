@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Category, ListItem, Result, parse_boolean, parse_size};
+use crate::{ListItem, Result, parse_boolean, parse_size};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Rss {
@@ -62,7 +62,7 @@ struct Item {
 
 fn to_item(item: Item) -> Result<ListItem> {
     let date = chrono::DateTime::parse_from_rfc2822(&item.pub_date)?.with_timezone(&chrono::Utc);
-    let category = Category::from_str(&item.category_id)?;
+    let category = item.category_id;
 
     let trusted = parse_boolean(&item.trusted)?;
     let remake = parse_boolean(&item.remake)?;
@@ -107,8 +107,6 @@ pub fn parse(data: impl AsRef<str>) -> Result<Vec<ListItem>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Category;
-
     #[test]
     fn test_parse() {
         let xml = r#"
@@ -162,7 +160,7 @@ mod tests {
             item.info_hash,
             Some("6a1093801c4567cf75ab148d4db88651ce3b25e3".to_string())
         );
-        assert_eq!(item.category, Category::AnimeEnglish);
+        assert_eq!(item.category, "1_2");
         assert_eq!(item.size, 215_901_798);
         assert_eq!(item.comments, 0);
         assert_eq!(item.trusted, false);

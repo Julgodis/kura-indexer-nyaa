@@ -8,7 +8,6 @@ use axum::{
 };
 
 use anyhow::Result;
-use nyaa_parser::Category;
 use reqwest::Url;
 
 use crate::{client::ListQuery, request_tracker::RequestTracker, ClientExt};
@@ -45,14 +44,7 @@ impl MirrorListRequest {
                 Some(1)
             }
         };
-        let category = match self.category {
-            Some(category) if Category::from_str(&category).is_ok() => Some(category),
-            None => None,
-            _ => {
-                tracing::warn!("invalid category, defaulting to None");
-                None
-            }
-        };
+        let category = self.category;
         let sort = match self.sort {
             Some(sort)
                 if ["id", "size", "seeders", "leechers", "downloads", "comments"]
@@ -182,7 +174,7 @@ async fn mirror_list_handler(
                     title: item.title.clone(),
                     pub_date: item.pub_date,
                     description: item.description.clone(),
-                    category: item.category.as_id(),
+                    category: item.category.clone(),
                     size: item.size,
                     seeders: item.seeders,
                     leechers: item.leechers,
@@ -220,7 +212,7 @@ async fn mirror_view_handler(
                 title: item.title,
                 pub_date: item.pub_date,
                 description_md: item.description_md,
-                category: item.category.as_id(),
+                category: item.category,
                 size: item.size,
                 seeders: item.seeders,
                 leechers: item.leechers,

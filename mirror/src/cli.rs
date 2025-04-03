@@ -16,6 +16,8 @@ pub struct Config {
 pub struct MirrorConfig {
     pub id: String,
     pub name: String,
+    #[serde(rename = "type")]
+    pub ty: MirrorType,
     pub api_url: String,
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -23,6 +25,14 @@ pub struct MirrorConfig {
 
     #[serde(skip)]
     pub api_url_parsed: Option<reqwest::Url>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum MirrorType {
+    #[serde(rename = "normal")]
+    Normal,
+    #[serde(rename = "adult")]
+    Adult,
 }
 
 #[derive(Parser, Debug)]

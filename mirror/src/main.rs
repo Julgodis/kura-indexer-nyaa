@@ -6,7 +6,7 @@ use axum::{
     response::IntoResponse,
 };
 use clap::Parser;
-use cli::MirrorConfig;
+use cli::{MirrorConfig, MirrorType};
 use reqwest::{StatusCode, Url};
 use tower_http::{
     compression::CompressionLayer,
@@ -165,6 +165,8 @@ pub struct MirrorSiteItem {
     pub id: String,
     pub name: String,
     pub hidden: bool,
+    #[serde(rename = "type")]
+    pub ty: MirrorType,
 }
 
 #[axum::debug_handler]
@@ -175,6 +177,7 @@ async fn mirror_handler(Extension(Mirrors(mirrors)): Extension<Mirrors>) -> impl
             id: mirror.id.clone(),
             name: mirror.name.clone(),
             hidden: mirror.hidden.unwrap_or(false),
+            ty: mirror.ty.clone(),
         })
         .collect::<Vec<_>>();
     Json(MirrorSiteResponse { items }).into_response()

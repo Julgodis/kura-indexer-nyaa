@@ -176,12 +176,17 @@ export type ListItem = z.infer<typeof ListItemSchema>;
 export type ListRequest = z.infer<typeof ListRequestSchema>;
 export type ListResponse = z.infer<typeof ListResponseSchema>;
 
+export const MirrorSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    hidden: z.boolean(),
+    type: z.enum(["normal", "adult"]),
+});
+
+export type Mirror = z.infer<typeof MirrorSchema>;
+
 export const MirrorResponseSchema = z.object({
-    items: z.array(z.object({
-        id: z.string(),
-        name: z.string(),
-        hidden: z.boolean(),
-    })),
+    items: z.array(MirrorSchema),
 });
 
 export type MirrorResponse = z.infer<typeof MirrorResponseSchema>;

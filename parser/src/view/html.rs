@@ -3,7 +3,6 @@ use std::str::FromStr;
 use chrono::TimeZone;
 use scraper::{Html, Selector};
 
-use crate::Category;
 use crate::Error;
 use crate::ListItem;
 use crate::Result;
@@ -75,7 +74,7 @@ pub fn parse(url: &str, data: &str) -> Result<View> {
         ))
     })?;
 
-    let category = Category::from_str(category_value)?;
+    let category = category_value.to_string();
 
     let file_size = parse_file_size(&document)?;
 

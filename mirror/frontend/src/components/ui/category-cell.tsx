@@ -37,9 +37,32 @@ function categorySplit(category_id: string): { mainCategory: string, subcategory
     return { mainCategory, subcategory };
 }
 
+function adultCategorySplit(category_id: string): { mainCategory: string, subcategory: string } {
+    const categoryMap: Record<string, string> = {
+        '0': 'All',
+        '1': 'Art',
+        '2': 'Real Life',
+    };
 
-export function CategoryCell({ category }: { category: string }) {
-    const { mainCategory, subcategory } = categorySplit(category);
+    const subcategories: Record<string, string> = {
+        '1_1': 'Anime',
+        '1_2': 'Doujinshi',
+        '1_3': 'Games',
+        '1_4': 'Manga',
+        '1_5': 'Pictures',
+        '2_1': 'Pictures',
+        '2_2': 'Videos',
+    };
+
+    const mainCategory = categoryMap[category_id.split('_')[0]];
+    const subcategory = subcategories[category_id];
+
+    return { mainCategory, subcategory };
+}
+
+
+export function CategoryCell({ mirrorType, category }: { mirrorType: "normal" | "adult", category: string }) {
+    const { mainCategory, subcategory } = mirrorType === "normal" ? categorySplit(category) : adultCategorySplit(category);
 
     if (!category) {
         return <TableCell><span className="text-xs text-muted-foreground">Unknown Category</span></TableCell>;

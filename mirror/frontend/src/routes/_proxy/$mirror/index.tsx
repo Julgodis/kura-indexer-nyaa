@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ListItem, ListRequest, ListRequestSchema, ListSortBy, ListSortOrder, MagnetResponseSchema, MirrorRouteParamsSchema } from '@/lib/types'
+import { ListItem, ListRequest, ListRequestSchema, ListSortBy, ListSortOrder, MagnetResponseSchema, Mirror, MirrorRouteParamsSchema } from '@/lib/types'
 import { queryClient } from '@/main'
 import { cn } from '@/lib/utils'
 import { ArrowDown, Download, Magnet } from 'lucide-react';
@@ -25,7 +25,7 @@ import { Footer } from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ApiUrl } from '@/lib/url'
-import { listQueryOptions } from '@/lib/query'
+import { listQueryOptions, mirrorQueryOptions } from '@/lib/query'
 
 export const Route = createFileRoute('/_proxy/$mirror/')({
   component: RouteComponent,
@@ -104,7 +104,7 @@ function SortableHeader({
   );
 }
 
-function ItemRow({ mirror, item }: { mirror: string, item: ListItem }) {
+function ItemRow({ mirror, item }: { mirror: Mirror, item: ListItem }) {
   const [magnetLoading, setMagnetLoading] = useState(false);
 
   const copyMagnetLink = async (e: React.MouseEvent) => {
@@ -144,7 +144,7 @@ function ItemRow({ mirror, item }: { mirror: string, item: ListItem }) {
 
   return (
     <TableRow className={cn('hover:bg-muted/50', item.remake && 'bg-destructive/15', item.trusted && 'bg-success/15')}>
-      <CategoryCell category={item.category} />
+      <CategoryCell mirrorType={mirror.type} category={item.category} />
       <TitleCell id={item.id} title={item.title} />
       <SizeCell size={item.size} />
       <DateCell date={new Date(item.pub_date)} />
@@ -169,8 +169,8 @@ function ItemRow({ mirror, item }: { mirror: string, item: ListItem }) {
 }
 
 
-function ItemsTable({ mirror, search }: { mirror: string, search: ListRequest }) {
-  const { data: { items } } = useSuspenseQuery(listQueryOptions(mirror, search))
+function ItemsTable({ mirror, search }: { mirror: Mirror, search: ListRequest }) {
+  const { data: { items } } = useSuspenseQuery(listQueryOptions(mirror.id, search))
 
   return (
     <Table style={{ tableLayout: 'fixed' }}>
@@ -311,7 +311,13 @@ function TablePagination({ page, onPageChange, pageCount }: { page: number; onPa
 function RouteComponent() {
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
-  const { mirror } = Route.useParams();
+  const { mirror: mirror_id } = Route.useParams();
+  const { data: { items: mirrors } } = useSuspenseQuery(mirrorQueryOptions)
+  const mirror = mirrors.find((item) => item.id === mirror_id);
+  if (!mirror) {
+    navigate({ to: '/', replace: true });
+    return null;
+  }
 
   const pageCount = search.p + 5;
   const onPageChange = (page: number) => {

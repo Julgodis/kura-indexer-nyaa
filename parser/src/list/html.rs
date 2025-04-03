@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use crate::Category;
 use crate::Error;
 use crate::ListItem;
 use crate::Result;
@@ -12,7 +11,7 @@ struct HtmlParser {
 }
 
 impl HtmlParser {
-    fn parse_category(&self, element: &scraper::ElementRef) -> Result<Category> {
+    fn parse_category(&self, element: &scraper::ElementRef) -> Result<String> {
         let a = element
             .select(&self.a_selector)
             .next()
@@ -28,7 +27,7 @@ impl HtmlParser {
             .nth(1)
             .ok_or_else(|| Error::ParseString(category.to_string()))?;
 
-        Ok(Category::from_str(category)?)
+        Ok(category.to_string())
     }
 
     fn parse_title(&self, element: &scraper::ElementRef) -> Result<(String, String, usize)> {
@@ -253,8 +252,6 @@ pub fn parse(url: &str, data: &str) -> Result<Vec<ListItem>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Category;
-
     #[test]
     fn test_parse() {
         let html = r#"
@@ -320,7 +317,7 @@ mod tests {
         assert_eq!(item.seeders, 5);
         assert_eq!(item.leechers, 41);
         assert_eq!(item.downloads, 1);
-        assert_eq!(item.category, Category::AnimeNonEnglish);
+        assert_eq!(item.category, "1_3");
         assert_eq!(item.size, 1073741824);
         assert_eq!(item.comments, 0);
         assert_eq!(item.trusted, false);

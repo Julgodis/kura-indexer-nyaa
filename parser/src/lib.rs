@@ -2,123 +2,6 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
-pub enum Category {
-    #[serde(rename = "0_0")]
-    All,
-    #[serde(rename = "1_0")]
-    Anime,
-    #[serde(rename = "1_1")]
-    AnimeAmv,
-    #[serde(rename = "1_2")]
-    AnimeEnglish,
-    #[serde(rename = "1_3")]
-    AnimeNonEnglish,
-    #[serde(rename = "1_4")]
-    AnimeRaw,
-    #[serde(rename = "2_0")]
-    Audio,
-    #[serde(rename = "2_1")]
-    AudioLossless,
-    #[serde(rename = "2_2")]
-    AudioLossy,
-    #[serde(rename = "3_0")]
-    Literature,
-    #[serde(rename = "3_1")]
-    LiteratureEnglish,
-    #[serde(rename = "3_2")]
-    LiteratureNonEnglish,
-    #[serde(rename = "3_3")]
-    LiteratureRaw,
-    #[serde(rename = "4_0")]
-    LiveAction,
-    #[serde(rename = "4_1")]
-    LiveActionEnglish,
-    #[serde(rename = "4_2")]
-    LiveActionIdol,
-    #[serde(rename = "4_3")]
-    LiveActionNonEnglish,
-    #[serde(rename = "4_4")]
-    LiveActionRaw,
-    #[serde(rename = "5_0")]
-    Pictures,
-    #[serde(rename = "5_1")]
-    PicturesGraphics,
-    #[serde(rename = "5_2")]
-    PicturesPhotos,
-    #[serde(rename = "6_0")]
-    Software,
-    #[serde(rename = "6_1")]
-    SoftwareApps,
-    #[serde(rename = "6_2")]
-    SoftwareGames,
-}
-
-impl FromStr for Category {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "0_0" => Ok(Category::All),
-            "1_0" => Ok(Category::Anime),
-            "1_1" => Ok(Category::AnimeAmv),
-            "1_2" => Ok(Category::AnimeEnglish),
-            "1_3" => Ok(Category::AnimeNonEnglish),
-            "1_4" => Ok(Category::AnimeRaw),
-            "2_0" => Ok(Category::Audio),
-            "2_1" => Ok(Category::AudioLossless),
-            "2_2" => Ok(Category::AudioLossy),
-            "3_0" => Ok(Category::Literature),
-            "3_1" => Ok(Category::LiteratureEnglish),
-            "3_2" => Ok(Category::LiteratureNonEnglish),
-            "3_3" => Ok(Category::LiteratureRaw),
-            "4_0" => Ok(Category::LiveAction),
-            "4_1" => Ok(Category::LiveActionEnglish),
-            "4_2" => Ok(Category::LiveActionIdol),
-            "4_3" => Ok(Category::LiveActionNonEnglish),
-            "4_4" => Ok(Category::LiveActionRaw),
-            "5_0" => Ok(Category::Pictures),
-            "5_1" => Ok(Category::PicturesGraphics),
-            "5_2" => Ok(Category::PicturesPhotos),
-            "6_0" => Ok(Category::Software),
-            "6_1" => Ok(Category::SoftwareApps),
-            "6_2" => Ok(Category::SoftwareGames),
-            _ => Err(Error::ParseCategory(s.to_string())),
-        }
-    }
-}
-
-impl Category {
-    pub fn as_id(&self) -> String {
-        match self {
-            Category::All => "0_0".to_string(),
-            Category::Anime => "1_0".to_string(),
-            Category::AnimeAmv => "1_1".to_string(),
-            Category::AnimeEnglish => "1_2".to_string(),
-            Category::AnimeNonEnglish => "1_3".to_string(),
-            Category::AnimeRaw => "1_4".to_string(),
-            Category::Audio => "2_0".to_string(),
-            Category::AudioLossless => "2_1".to_string(),
-            Category::AudioLossy => "2_2".to_string(),
-            Category::Literature => "3_0".to_string(),
-            Category::LiteratureEnglish => "3_1".to_string(),
-            Category::LiteratureNonEnglish => "3_2".to_string(),
-            Category::LiteratureRaw => "3_3".to_string(),
-            Category::LiveAction => "4_0".to_string(),
-            Category::LiveActionEnglish => "4_1".to_string(),
-            Category::LiveActionIdol => "4_2".to_string(),
-            Category::LiveActionNonEnglish => "4_3".to_string(),
-            Category::LiveActionRaw => "4_4".to_string(),
-            Category::Pictures => "5_0".to_string(),
-            Category::PicturesGraphics => "5_1".to_string(),
-            Category::PicturesPhotos => "5_2".to_string(),
-            Category::Software => "6_0".to_string(),
-            Category::SoftwareApps => "6_1".to_string(),
-            Category::SoftwareGames => "6_2".to_string(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListItem {
     pub title: String,
@@ -130,7 +13,7 @@ pub struct ListItem {
     pub leechers: usize,
     pub downloads: usize,
     pub info_hash: Option<String>,
-    pub category: Category,
+    pub category: String,
     pub size: u64,
     pub comments: usize,
     pub trusted: bool,
@@ -168,7 +51,7 @@ pub struct View {
     pub leechers: usize,
     pub downloads: usize,
     pub info_hash: String,
-    pub category: Category,
+    pub category: String,
     pub size: u64,
     pub trusted: bool,
     pub remake: bool,
