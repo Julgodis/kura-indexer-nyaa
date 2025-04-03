@@ -186,6 +186,12 @@ impl HtmlParser {
             .map(|s| s.contains("success"))
             .unwrap_or(false);
 
+        let remake = element
+            .value()
+            .attr("class")
+            .map(|s| s.contains("danger"))
+            .unwrap_or(false);
+
         let url = format!("{}{}", self.url.trim_end_matches("/"), url);
         let download = format!("{}{}", self.url.trim_end_matches("/"), download);
         let id = url
@@ -211,7 +217,7 @@ impl HtmlParser {
             size,
             comments,
             trusted,
-            remake: false,
+            remake,
             download_link: Some(download),
             magnet_link: Some(magnet),
             description: None,
@@ -269,7 +275,7 @@ mod tests {
 			</tr>
 		</thead>
 		<tbody>
-			<tr class="default">
+			<tr class="danger">
 				<td>
 					<a href="/?c=1_3" title="Anime - Non-English-translated">
 						<img src="/static/img/icons/nyaa/1_3.png" alt="Anime - Non-English-translated" class="category-icon">
@@ -318,7 +324,7 @@ mod tests {
         assert_eq!(item.size, 1073741824);
         assert_eq!(item.comments, 0);
         assert_eq!(item.trusted, false);
-        assert_eq!(item.remake, false);
+        assert_eq!(item.remake, true);
         assert_eq!(item.description, None);
         assert_eq!(
             item.download_link,

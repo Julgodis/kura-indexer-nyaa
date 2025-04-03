@@ -118,20 +118,28 @@ function ItemRow({ mirror, item }: { mirror: string, item: ListItem }) {
       return;
     }
 
-    const json_data = await response.json();
+    let magnet_link = undefined;
+    try {
+      const json_data = await response.json();
+      const data = MagnetResponseSchema.parse(json_data);
+      magnet_link = data.magnet_link;
+    } catch (error) {
+      toast.error('Failed to copy magnet link', { description: `${error}` });
+      setMagnetLoading(false);
+      return;
+    }
 
     try {
-      const data = MagnetResponseSchema.parse(json_data);
-      const magnet_link = data.magnet_link;
       await navigator.clipboard.writeText(magnet_link);
       toast.success('Magnet link copied to clipboard', {
         description: `${magnet_link}`,
       });
-    } catch (error) {
-      toast.error('Failed to copy magnet link', { description: `${error}` });
-    } finally {
-      setMagnetLoading(false);
+    } catch {
+      toast.error('Clipboard access denied', {
+        description: 'However, you can still copy the magnet link manually: ' + magnet_link,
+      });
     }
+    setMagnetLoading(false);
   };
 
   return (
