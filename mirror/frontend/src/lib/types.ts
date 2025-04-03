@@ -201,3 +201,12 @@ export const MirrorViewRouteParamsSchema = z.object({
     id: z.number().int().nonnegative(),
 });
 
+export const MirrorHealthResponseSchema = z.object({
+    mirrors: z.array(
+    z.object({
+        id: z.string(),
+        name: z.string(),
+        requests: z.array(z.tuple([z.string().datetime(), z.string(), z.boolean(), z.boolean(), z.number()])),
+    })
+)});
+

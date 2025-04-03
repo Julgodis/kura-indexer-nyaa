@@ -11,12 +11,19 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as HealthImport } from './routes/health'
 import { Route as IndexImport } from './routes/index'
 import { Route as ProxyMirrorIndexImport } from './routes/proxy/$mirror/index'
 import { Route as ProxyMirrorViewIdImport } from './routes/proxy/$mirror/view.$id'
 import { Route as ProxyMirrorUserIdImport } from './routes/proxy/$mirror/user.$id'
 
 // Create/Update Routes
+
+const HealthRoute = HealthImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const IndexRoute = IndexImport.update({
   id: '/',
@@ -53,6 +60,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthImport
+      parentRoute: typeof rootRoute
+    }
     '/proxy/$mirror/': {
       id: '/proxy/$mirror/'
       path: '/proxy/$mirror'
@@ -81,6 +95,7 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
   '/proxy/$mirror': typeof ProxyMirrorIndexRoute
   '/proxy/$mirror/user/$id': typeof ProxyMirrorUserIdRoute
   '/proxy/$mirror/view/$id': typeof ProxyMirrorViewIdRoute
@@ -88,6 +103,7 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
   '/proxy/$mirror': typeof ProxyMirrorIndexRoute
   '/proxy/$mirror/user/$id': typeof ProxyMirrorUserIdRoute
   '/proxy/$mirror/view/$id': typeof ProxyMirrorViewIdRoute
@@ -96,6 +112,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
   '/proxy/$mirror/': typeof ProxyMirrorIndexRoute
   '/proxy/$mirror/user/$id': typeof ProxyMirrorUserIdRoute
   '/proxy/$mirror/view/$id': typeof ProxyMirrorViewIdRoute
@@ -105,18 +122,21 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/health'
     | '/proxy/$mirror'
     | '/proxy/$mirror/user/$id'
     | '/proxy/$mirror/view/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/health'
     | '/proxy/$mirror'
     | '/proxy/$mirror/user/$id'
     | '/proxy/$mirror/view/$id'
   id:
     | '__root__'
     | '/'
+    | '/health'
     | '/proxy/$mirror/'
     | '/proxy/$mirror/user/$id'
     | '/proxy/$mirror/view/$id'
@@ -125,6 +145,7 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HealthRoute: typeof HealthRoute
   ProxyMirrorIndexRoute: typeof ProxyMirrorIndexRoute
   ProxyMirrorUserIdRoute: typeof ProxyMirrorUserIdRoute
   ProxyMirrorViewIdRoute: typeof ProxyMirrorViewIdRoute
@@ -132,6 +153,7 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HealthRoute: HealthRoute,
   ProxyMirrorIndexRoute: ProxyMirrorIndexRoute,
   ProxyMirrorUserIdRoute: ProxyMirrorUserIdRoute,
   ProxyMirrorViewIdRoute: ProxyMirrorViewIdRoute,
@@ -148,6 +170,7 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/health",
         "/proxy/$mirror/",
         "/proxy/$mirror/user/$id",
         "/proxy/$mirror/view/$id"
@@ -155,6 +178,9 @@ export const routeTree = rootRoute
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/health": {
+      "filePath": "health.tsx"
     },
     "/proxy/$mirror/": {
       "filePath": "proxy/$mirror/index.tsx"

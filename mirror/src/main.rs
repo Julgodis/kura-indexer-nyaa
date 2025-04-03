@@ -341,18 +341,19 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut app = axum::Router::new()
-        .route_service("/", ServeFile::new(index_path))
+        .route_service("/", ServeFile::new(index_path.clone()))
         .nest_service(
             "/api",
             Router::new()
-                .route("/mirror/{mirror}/list", axum::routing::get(list_handler))
-                .route(
-                    "/mirror/{mirror}/magnet/{id}",
-                    axum::routing::get(magnet_handler),
-                )
-                .route("/mirror", axum::routing::get(mirror_handler))
-                .route("/health", axum::routing::get(health_handler)),
+            .route("/mirror/{mirror}/list", axum::routing::get(list_handler))
+            .route(
+                "/mirror/{mirror}/magnet/{id}",
+                axum::routing::get(magnet_handler),
+            )
+            .route("/mirror", axum::routing::get(mirror_handler))
+            .route("/health", axum::routing::get(health_handler)),
         )
+        .route_service("/{*path}", ServeFile::new(index_path))
         .nest_service("/static", ServeDir::new(config.static_dir))
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new());

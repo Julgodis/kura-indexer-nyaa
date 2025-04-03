@@ -72,7 +72,7 @@ impl RequestTracker {
         let conn =
             rusqlite::Connection::open(self.db_path.clone()).expect("failed to open database");
         let mut stmt = conn
-            .prepare("SELECT timestamp, path, success, cache_hit, elapsed_time FROM requests")
+            .prepare("SELECT timestamp, path, success, cache_hit, elapsed_time FROM requests ORDER BY timestamp DESC LIMIT 250")
             .expect("failed to prepare statement");
         let rows = stmt
             .query_map([], |row| {
