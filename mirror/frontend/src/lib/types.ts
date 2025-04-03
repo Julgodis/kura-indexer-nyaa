@@ -180,6 +180,7 @@ export const MirrorResponseSchema = z.object({
     items: z.array(z.object({
         id: z.string(),
         name: z.string(),
+        hidden: z.boolean(),
     })),
 });
 

@@ -31,10 +31,17 @@ export function Header() {
                         }}
                     >
                         <SelectTrigger>
-                            <SelectValue />
+                            {currentMirror.hidden ? (
+                                <span className="text-gray-500">{currentMirror.name}</span>
+                            ) : (
+                                <SelectValue />
+                            )}
+                            
                         </SelectTrigger>
                         <SelectContent>
-                            {data.items.map((mirror) => (
+                            {data.items
+                                .filter((item) => !item.hidden)
+                                .map((mirror) => (
                                 <SelectItem key={mirror.id} value={mirror.id}>
                                     {mirror.name}
                                 </SelectItem>

@@ -17,6 +17,9 @@ pub struct MirrorConfig {
     pub id: String,
     pub name: String,
     pub api_url: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<bool>,
 
     #[serde(skip)]
     pub api_url_parsed: Option<reqwest::Url>,
