@@ -25,7 +25,7 @@ function RouteComponent() {
     return <ErrorComponent error={new Error('No mirrors available')} reset={() => { }} />
   }
 
-  navigate({ to: `/proxy/$mirror`, params: { mirror: data.items[0].id } })
+  navigate({ to: `/$mirror`, params: { mirror: data.items[0].id } })
   return (
     <div className="flex justify-center items-center h-screen">
       <div className="text-green-500">Redirecting to the first mirror...</div>

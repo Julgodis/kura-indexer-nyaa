@@ -27,7 +27,7 @@ import { toast } from 'sonner'
 import { ApiUrl } from '@/lib/url'
 import { listQueryOptions } from '@/lib/query'
 
-export const Route = createFileRoute('/proxy/$mirror/')({
+export const Route = createFileRoute('/_proxy/$mirror/')({
   component: RouteComponent,
   parseParams: MirrorRouteParamsSchema.parse,
   validateSearch: zodValidator(ListRequestSchema),
@@ -80,7 +80,7 @@ function SortableHeader({
     }
 
     navigate({
-      to: '/proxy/$mirror',
+      to: '/$mirror',
       params,
       search: {
         ...search,

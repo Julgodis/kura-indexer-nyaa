@@ -1,8 +1,9 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Search } from './search';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Route } from "@/routes/proxy/$mirror";
+import { Route } from "@/routes/_proxy/$mirror";
 import { mirrorQueryOptions } from '@/lib/query';
+import nyaaLogoUrl from '@/assets/nyaa.png';
 
 export function Header() {
     const navigate = Route.useNavigate();
@@ -18,14 +19,14 @@ export function Header() {
         <header>
             <div className="py-4">
                 <div className="flex justify-between items-center gap-2 hover:cursor-pointer">
-                    <div className="flex items-center gap-2 hover:cursor-pointer" onClick={() => navigate({ to: '/proxy/$mirror', params: { mirror: currentMirror.id } })}>
-                        <img src="/nyaa.png" alt="Logo" className="h-12 w-12" />
+                    <div className="flex items-center gap-2 hover:cursor-pointer" onClick={() => navigate({ to: '/$mirror', params: { mirror: currentMirror.id } })}>
+                        <img src={nyaaLogoUrl} alt="Logo" className="h-12 w-12" />
                     </div>
                     <Select
                         defaultValue={currentMirror.id}
                         onValueChange={(value) => {
                             if (value !== currentMirror.id) {
-                                navigate({ to: `/proxy/$mirror`, params: { mirror: value } });
+                                navigate({ to: `/$mirror`, params: { mirror: value } });
                             }
                         }}
                     >

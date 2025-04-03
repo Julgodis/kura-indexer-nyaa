@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Button } from "./ui/button";
-import { Route } from "@/routes/proxy/$mirror";
+import { Route } from "@/routes/_proxy/$mirror";
 import { Separator } from "./ui/separator";
 
 export function Search() {

@@ -5,8 +5,7 @@ import { queryClient } from '@/main';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, ErrorComponentProps } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react';
-
-
+import nyaaLogoUrl from '@/assets/nyaa.png';
 
 export const Route = createFileRoute('/health')({
     component: RouteComponent,
@@ -26,7 +25,7 @@ function RouteComponent() {
         <div className="flex justify-center items-center h-screen">
             {data.mirrors.map((mirror) => (
                 <div key={mirror.id} className="flex flex-col items-center">
-                    <img src="/nyaa.png" alt="Logo" className="h-12 w-12" />
+                    <img src={nyaaLogoUrl} alt="Logo" className="h-12 w-12" />
                     <div className="text-green-500">{mirror.name}</div>
                     <Table>
                         <TableHeader>
