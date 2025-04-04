@@ -67,6 +67,7 @@ pub struct Client {
     cache: Arc<Mutex<Cache>>,
     rate_limiter: RateLimiter,
     request_tracker: Option<RequestTracker>,
+    cache_duration: Duration,
 }
 
 impl Client {
@@ -154,7 +155,7 @@ impl Client {
             self.cache
                 .lock()
                 .await
-                .put(&url, query, Duration::from_secs(60 * 60 * 24), &result);
+                .put(&url, query, self.cache_duration, &result);
             return Ok(result);
         } else {
             let error_body = response
@@ -234,12 +235,10 @@ impl Client {
                 .as_ref()
                 .map(|tracker| tracker.track_request(&url, &id, true, elapsed_time));
 
-            self.cache.lock().await.put(
-                &url,
-                &("view", &id),
-                Duration::from_secs(60 * 60 * 24),
-                &result,
-            );
+            self.cache
+                .lock()
+                .await
+                .put(&url, &("view", &id), self.cache_duration, &result);
             return Ok(result);
         } else {
             let error_body = response
@@ -269,6 +268,7 @@ pub struct ClientBuilder {
     timeout: Duration,
     cache_dir: PathBuf,
     cache_size: u64,
+    cache_duration: Duration,
     rate_limiter: RateLimiter,
     request_tracker: Option<RequestTracker>,
 }
@@ -281,6 +281,7 @@ impl ClientBuilder {
             timeout: Duration::from_secs(30),
             cache_dir: PathBuf::from("cache"),
             cache_size: 64 * 1024 * 1024,
+            cache_duration: Duration::from_secs(60 * 60),
             rate_limiter: RateLimiter::new(10, Duration::from_secs(1)),
             request_tracker: None,
             interface: None,
@@ -295,6 +296,11 @@ impl ClientBuilder {
 
     pub fn cache_size(mut self, size: u64) -> Self {
         self.cache_size = size;
+        self
+    }
+
+    pub fn cache_duration(mut self, duration: Duration) -> Self {
+        self.cache_duration = duration;
         self
     }
 
@@ -340,6 +346,7 @@ impl ClientBuilder {
             cache,
             rate_limiter: self.rate_limiter,
             request_tracker: self.request_tracker,
+            cache_duration: self.cache_duration,
         }
     }
 }

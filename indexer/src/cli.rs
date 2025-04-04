@@ -18,6 +18,10 @@ pub struct ApiConfig {
     pub listen_addr: SocketAddr,
     pub cache_dir: PathBuf,
     pub cache_size_mb: f64,
+    #[serde(with = "humantime_serde")]
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_duration: Option<std::time::Duration>,
     pub request_tracker_db: PathBuf,
 }
 

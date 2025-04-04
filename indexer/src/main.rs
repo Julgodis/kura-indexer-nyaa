@@ -107,6 +107,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .cache_dir(config.api.cache_dir)
         .cache_size((config.api.cache_size_mb * 1024.0 * 1024.0) as u64)
+        .cache_duration(config.api.cache_duration.unwrap_or(std::time::Duration::from_secs(60)))
         .rate_limiter(RateLimiter::new(
             config.nyaa.window_requests.unwrap_or(10),
             config
