@@ -111,7 +111,7 @@ function ItemRow({ mirror, item }: { mirror: Mirror, item: ListItem }) {
     e.preventDefault();
     setMagnetLoading(true);
 
-    const response = await fetch(`${ApiUrl}/api/mirror/${mirror}/magnet/${item.id}`);
+    const response = await fetch(`${ApiUrl}/api/mirror/${mirror.id}/magnet/${item.id}`);
     if (!response.ok) {
       toast.error('Failed to copy magnet link');
       setMagnetLoading(false);
