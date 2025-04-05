@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use crate::Error;
 use crate::ListItem;
 use crate::Result;
@@ -115,10 +113,7 @@ impl HtmlParser {
             .parse::<i64>()
             .map_err(|_| Error::ParseInteger(date.into()))?;
 
-        let date = chrono::NaiveDateTime::from_timestamp_opt(date, 0)
-            .ok_or_else(|| Error::ParseTimestamp(date.to_string()))?
-            .and_local_timezone(chrono::Utc)
-            .single()
+        let date = chrono::DateTime::from_timestamp(date, 0)
             .ok_or_else(|| Error::ParseTimestamp(date.to_string()))?;
 
         Ok(date.with_timezone(&chrono::Utc))

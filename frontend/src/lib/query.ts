@@ -6,8 +6,7 @@ export const mirrorQueryOptions = queryOptions({
     queryKey: ['mirror'],
     queryFn: async () => {
         const response = await fetch(`${ApiUrl}/api/mirror`)
-        const data = await response.json()
-        return MirrorResponseSchema.parse(data)
+        return MirrorResponseSchema.parse(await response.json())
     }
 })
 
@@ -18,15 +17,14 @@ export const listQueryOptions = (mirror: string, search: ListRequest) => {
         queryFn: async () => {
             const searchParams = new URLSearchParams()
             if (search.p) searchParams.append('p', search.p.toString())
-            if (search.c) searchParams.append('c', search.c.toString())
-            if (search.s) searchParams.append('s', search.s.toString())
-            if (search.o) searchParams.append('o', search.o.toString())
-            if (search.f) searchParams.append('f', search.f.toString())
+            searchParams.append('c', search.c.toString())
+            searchParams.append('s', search.s.toString())
+            searchParams.append('o', search.o.toString())
+            searchParams.append('f', search.f.toString())
             if (search.q) searchParams.append('q', search.q.toString())
 
             const response = await fetch(`${ApiUrl}/api/mirror/${mirror}/list?${searchParams.toString()}`)
-            const data = await response.json()
-            return ListResponseSchema.parse(data)
+            return ListResponseSchema.parse(await response.json())
         }
     })
 }
@@ -35,7 +33,6 @@ export const healthQueryOptions = queryOptions({
     queryKey: ['health'],
     queryFn: async () => {
         const response = await fetch(`${ApiUrl}/api/health`)
-        const data = await response.json()
-        return MirrorHealthResponseSchema.parse(data)
+        return MirrorHealthResponseSchema.parse(await response.json())
     }
 })

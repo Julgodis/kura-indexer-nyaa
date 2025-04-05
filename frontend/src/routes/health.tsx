@@ -62,7 +62,7 @@ function PendingComponent() {
 
 function ErrorComponent({ error }: ErrorComponentProps) {
     return (
-        <ErrorCard error={error} title="An error occurred while loading the sites" onRetry={() => window.location.reload()} />
+        <ErrorCard error={error} title="An error occurred while loading the sites" onRetry={() => { window.location.reload() }} />
     )
 }
 

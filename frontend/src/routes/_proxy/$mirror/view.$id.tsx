@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_proxy/$mirror/view/$id')({
   component: RouteComponent,
-  parseParams: MirrorViewRouteParamsSchema.parse,
+  parseParams: (params) => MirrorViewRouteParamsSchema.parse(params),
 })
 
 function RouteComponent() {

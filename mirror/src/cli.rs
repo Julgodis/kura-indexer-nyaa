@@ -9,6 +9,7 @@ pub struct Config {
     pub listen_addr: SocketAddr,
     pub static_dir: PathBuf,
     pub cors_allow_everyone: Option<bool>,
+    pub request_tracker_db: PathBuf,
     pub mirror: Vec<MirrorConfig>,
 }
 
@@ -18,13 +19,39 @@ pub struct MirrorConfig {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: MirrorType,
-    pub api_url: String,
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hidden: Option<bool>,
 
-    #[serde(skip)]
-    pub api_url_parsed: Option<reqwest::Url>,
+    pub url: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interface: Option<String>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local_addr: Option<String>,
+    #[serde(with = "humantime_serde")]
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<std::time::Duration>,
+    #[serde(with = "humantime_serde")]
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub update_interval: Option<std::time::Duration>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub window_requests: Option<usize>,
+    #[serde(with = "humantime_serde")]
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub window_size: Option<std::time::Duration>,
+
+    pub cache_dir: PathBuf,
+    pub cache_size_mb: f64,
+    #[serde(with = "humantime_serde")]
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_duration: Option<std::time::Duration>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

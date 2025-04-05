@@ -1,362 +1,129 @@
-use std::path::PathBuf;
+use std::sync::Arc;
 
-use axum::{
-    Extension, Json, Router,
-    extract::{Path, Query},
-    response::IntoResponse,
-};
+use axum::{Extension, Router};
 use clap::Parser;
 use cli::{MirrorConfig, MirrorType};
-use reqwest::{StatusCode, Url};
+use rate_limiter::RateLimiter;
+use request_tracker::RequestTracker;
+use reqwest::Url;
+use tokio::sync::Mutex;
 use tower_http::{
     compression::CompressionLayer,
     services::{ServeDir, ServeFile},
     trace::TraceLayer,
 };
 
+mod api;
+mod cache;
 mod cli;
+mod client;
+mod rate_limiter;
+mod request_tracker;
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MirrorListRequest {
-    #[serde(default)]
-    #[serde(rename = "p")]
-    pub page: Option<usize>,
-    #[serde(default)]
-    #[serde(rename = "c")]
-    pub category: Option<String>,
-    #[serde(default)]
-    #[serde(rename = "s")]
-    pub sort: Option<String>,
-    #[serde(default)]
-    #[serde(rename = "o")]
-    pub order: Option<String>,
-    #[serde(default)]
-    #[serde(rename = "f")]
-    pub filter: Option<String>,
-    #[serde(default)]
-    #[serde(rename = "q")]
-    pub query: Option<String>,
+#[derive(Debug, Clone)]
+pub struct Mirror {
+    pub config: MirrorConfig,
+    pub api_url: Url,
+    pub client: Arc<Mutex<client::Client>>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MirrorListResponse {
-    pub items: Vec<MirrorListItem>,
-}
+impl Mirror {
+    pub fn new(config: MirrorConfig, request_tracker: RequestTracker) -> anyhow::Result<Self> {
+        let api_url = if let Ok(url) = Url::parse(&config.url) {
+            url
+        } else if let Ok(url) = Url::parse(&format!("http://{}", config.url)) {
+            url
+        } else {
+            Url::parse(&config.url)?
+        };
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MirrorListItem {
-    pub id: usize,
-    pub title: String,
-    pub pub_date: chrono::DateTime<chrono::Utc>,
-    pub description: Option<String>,
-    pub category: String,
-    pub size: u64,
-    pub seeders: usize,
-    pub leechers: usize,
-    pub downloads: usize,
-    pub comments: usize,
-    pub trusted: bool,
-    pub remake: bool,
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MirrorViewComment {
-    pub id: usize,
-    pub user: String,
-    pub date: chrono::DateTime<chrono::Utc>,
-    pub edited_date: Option<chrono::DateTime<chrono::Utc>>,
-    pub content: String,
-    pub avatar: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MirrorViewFile {
-    pub id: usize,
-    pub name: String,
-    pub size: u64,
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MirrorViewResponse {
-    pub id: usize,
-    pub title: String,
-    pub pub_date: chrono::DateTime<chrono::Utc>,
-    pub description_md: String,
-    pub category: String,
-    pub size: u64,
-    pub seeders: usize,
-    pub leechers: usize,
-    pub downloads: usize,
-    pub trusted: bool,
-    pub remake: bool,
-    pub comments: Vec<MirrorViewComment>,
-    pub files: Vec<MirrorViewFile>,
-    pub magnet_link: Option<String>,
-}
-
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MagnetResponse {
-    pub magnet_link: String,
-}
-
-#[axum::debug_handler]
-async fn list_handler(
-    Path(mirror_id): Path<String>,
-    Extension(Mirrors(mirrors)): Extension<Mirrors>,
-    Query(request): axum::extract::Query<MirrorListRequest>,
-    Extension(client): Extension<reqwest::Client>,
-) -> impl IntoResponse {
-    let mirror = mirrors
-        .iter()
-        .find(|mirror| mirror.id == mirror_id)
-        .and_then(|mirror| mirror.api_url_parsed.clone())
-        .clone();
-    let Some(mirror) = mirror else {
-        tracing::warn!("mirror not found");
-        return (
-            StatusCode::NOT_FOUND,
-            Json(MirrorListResponse { items: vec![] }),
-        )
-            .into_response();
-    };
-
-    let Ok(url) = mirror.join("/mirror/list") else {
-        tracing::warn!("failed to parse URL");
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(MirrorListResponse { items: vec![] }),
-        )
-            .into_response();
-    };
-
-    tracing::trace!("mirror url: {:?}", url);
-    let Ok(inner_request) = client.get(url).query(&request).send().await else {
-        tracing::warn!("failed to send request");
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(MirrorListResponse { items: vec![] }),
-        )
-            .into_response();
-    };
-
-    let inner_response = match inner_request.json::<MirrorListResponse>().await {
-        Ok(inner_response) => inner_response,
-        Err(_) => {
-            tracing::warn!("failed to parse response");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(MirrorListResponse { items: vec![] }),
+        let client = client::Client::builder(&config.id, api_url.clone())
+            .timeout(config.timeout.unwrap_or(std::time::Duration::from_secs(30)))
+            .cache_dir(config.cache_dir.clone())
+            .cache_size((config.cache_size_mb * 1024.0 * 1024.0) as u64)
+            .cache_duration(
+                config
+                    .cache_duration
+                    .unwrap_or(std::time::Duration::from_secs(60)),
             )
-                .into_response();
-        }
-    };
-
-    Json(inner_response).into_response()
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MirrorSiteResponse {
-    pub items: Vec<MirrorSiteItem>,
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct MirrorSiteItem {
-    pub id: String,
-    pub name: String,
-    pub hidden: bool,
-    #[serde(rename = "type")]
-    pub ty: MirrorType,
-}
-
-#[axum::debug_handler]
-async fn mirror_handler(Extension(Mirrors(mirrors)): Extension<Mirrors>) -> impl IntoResponse {
-    let items = mirrors
-        .iter()
-        .map(|mirror| MirrorSiteItem {
-            id: mirror.id.clone(),
-            name: mirror.name.clone(),
-            hidden: mirror.hidden.unwrap_or(false),
-            ty: mirror.ty.clone(),
+            .rate_limiter(RateLimiter::new(
+                config.window_requests.unwrap_or(10),
+                config
+                    .window_size
+                    .unwrap_or(std::time::Duration::from_secs(60)),
+            ))
+            .request_tracker(request_tracker)
+            .local_addr(config.local_addr.clone())
+            .interface(config.interface.clone())
+            .build();
+        Ok(Self {
+            config,
+            api_url,
+            client: Arc::new(Mutex::new(client)),
         })
-        .collect::<Vec<_>>();
-    Json(MirrorSiteResponse { items }).into_response()
-}
-
-#[axum::debug_handler]
-async fn magnet_handler(
-    Path((mirror_id, item_id)): Path<(String, String)>,
-    Extension(Mirrors(mirrors)): Extension<Mirrors>,
-    Extension(client): Extension<reqwest::Client>,
-) -> impl IntoResponse {
-    let mirror = mirrors
-        .iter()
-        .find(|mirror| mirror.id == mirror_id)
-        .and_then(|mirror| mirror.api_url_parsed.clone())
-        .clone();
-    let Some(mirror) = mirror else {
-        tracing::warn!("mirror not found");
-        return (
-            StatusCode::NOT_FOUND,
-            Json(MagnetResponse {
-                magnet_link: "".to_string(),
-            }),
-        )
-            .into_response();
-    };
-
-    let Ok(url) = mirror.join(&format!("/mirror/view/{}", item_id)) else {
-        tracing::warn!("failed to parse URL");
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(MagnetResponse {
-                magnet_link: "".to_string(),
-            }),
-        )
-            .into_response();
-    };
-
-    tracing::trace!("mirror url: {:?}", url);
-    let Ok(inner_request) = client.get(url).send().await else {
-        tracing::warn!("failed to send request");
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(MagnetResponse {
-                magnet_link: "".to_string(),
-            }),
-        )
-            .into_response();
-    };
-
-    let inner_response = match inner_request.json::<MirrorViewResponse>().await {
-        Ok(inner_response) => {
-            if let Some(magnet_link) = inner_response.magnet_link {
-                MagnetResponse { magnet_link }
-            } else {
-                tracing::warn!("magnet link not found");
-                return (
-                    StatusCode::NOT_FOUND,
-                    Json(MagnetResponse {
-                        magnet_link: "".to_string(),
-                    }),
-                )
-                    .into_response();
-            }
-        }
-        Err(_) => {
-            tracing::warn!("failed to parse response");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(MagnetResponse {
-                    magnet_link: "".to_string(),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    Json(inner_response).into_response()
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-struct HealthResponse {
-    mirrors: Vec<MirrorHealth>,
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-struct MirrorHealth {
-    id: String,
-    name: String,
-    requests: Vec<(chrono::DateTime<chrono::Utc>, String, bool, bool, f64)>,
-}
-
-#[axum::debug_handler]
-async fn health_handler(
-    Extension(client): Extension<reqwest::Client>,
-    Extension(Mirrors(mirrors)): Extension<Mirrors>,
-) -> impl IntoResponse {
-    let mut health = HealthResponse { mirrors: vec![] };
-
-    for mirror in mirrors.iter() {
-        let url = match mirror.api_url_parsed.clone() {
-            Some(url) => url,
-            None => {
-                tracing::warn!("failed to parse URL");
-                continue;
-            }
-        };
-
-        let url = match url.join("/mirror/requests") {
-            Ok(url) => url,
-            Err(_) => {
-                tracing::warn!("failed to parse URL");
-                continue;
-            }
-        };
-
-        let Ok(inner_request) = client.get(url).send().await else {
-            tracing::warn!("failed to send request");
-            continue;
-        };
-
-        let inner_response = match inner_request
-            .json::<Vec<(chrono::DateTime<chrono::Utc>, String, bool, bool, f64)>>()
-            .await
-        {
-            Ok(inner_response) => inner_response,
-            Err(_) => {
-                tracing::warn!("failed to parse response");
-                continue;
-            }
-        };
-
-        health.mirrors.push(MirrorHealth {
-            id: mirror.id.clone(),
-            name: mirror.name.clone(),
-            requests: inner_response,
-        });
     }
 
-    Json(health).into_response()
+    pub fn is_hidden(&self) -> bool {
+        self.config.hidden.unwrap_or(false)
+    }
+
+    pub fn id(&self) -> &str {
+        &self.config.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.config.name
+    }
+
+    pub fn ty(&self) -> MirrorType {
+        self.config.ty.clone()
+    }
 }
 
 #[derive(Debug, Clone)]
-struct Mirrors(Vec<MirrorConfig>);
+pub struct MirrorExt {
+    mirrors: Vec<Mirror>,
+}
+
+impl MirrorExt {
+    pub fn iter(&self) -> impl Iterator<Item = &Mirror> {
+        self.mirrors.iter()
+    }
+
+    pub fn find_by_id(&self, id: &str) -> Option<&Mirror> {
+        self.mirrors.iter().find(|mirror| mirror.id() == id)
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
     let cli = cli::Cli::parse();
-    let mut config = cli::load_config(&cli.config)?;
+    let config = cli::load_config(&cli.config)?;
     tracing::info!("loaded config: {:?}", config);
 
     let index_path = config.static_dir.join("index.html");
-
-    for mirror in &mut config.mirror {
-        let api_url = if let Ok(url) = Url::parse(&mirror.api_url) {
-            url
-        } else if let Ok(url) = Url::parse(&format!("http://{}", mirror.api_url)) {
-            url
-        } else {
-            Url::parse(&mirror.api_url)?
-        };
-
-        mirror.api_url_parsed = Some(api_url.clone());
-    }
 
     let mut app = axum::Router::new()
         .route_service("/", ServeFile::new(index_path.clone()))
         .nest_service(
             "/api",
             Router::new()
-            .route("/mirror/{mirror}/list", axum::routing::get(list_handler))
-            .route(
-                "/mirror/{mirror}/magnet/{id}",
-                axum::routing::get(magnet_handler),
-            )
-            .route("/mirror", axum::routing::get(mirror_handler))
-            .route("/health", axum::routing::get(health_handler)),
+                .route(
+                    "/mirror/{mirror}/list",
+                    axum::routing::get(api::mirror::list::handler),
+                )
+                .route(
+                    "/mirror/{mirror}/view/{id}",
+                    axum::routing::get(api::mirror::view::handler),
+                )
+                .route(
+                    "/mirror/{mirror}/magnet/{id}",
+                    axum::routing::get(api::mirror::magnet::handler),
+                )
+                .route("/mirror", axum::routing::get(api::mirror::handler))
+                .route("/health", axum::routing::get(api::health::handler)),
         )
         .route_service("/{*path}", ServeFile::new(index_path))
         .nest_service("/static", ServeDir::new(config.static_dir))
@@ -367,13 +134,18 @@ async fn main() -> anyhow::Result<()> {
         app = app.layer(tower_http::cors::CorsLayer::very_permissive());
     }
 
-    let client = reqwest::Client::builder()
-        .user_agent("Nyaa-Mirror/0.1")
-        .build()?;
+    let request_tracker = request_tracker::RequestTracker::new(config.request_tracker_db.clone());
+    let mext = MirrorExt {
+        mirrors: config
+            .mirror
+            .iter()
+            .map(|mirror_config| -> anyhow::Result<Mirror> {
+                Mirror::new(mirror_config.clone(), request_tracker.clone())
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+    };
 
-    let app = app
-        .layer(Extension(client))
-        .layer(Extension(Mirrors(config.mirror.clone())));
+    let app = app.layer(Extension(mext)).layer(Extension(request_tracker));
 
     let listener = tokio::net::TcpListener::bind(config.listen_addr)
         .await

@@ -1,10 +1,7 @@
-use std::str::FromStr;
-
 use chrono::TimeZone;
 use scraper::{Html, Selector};
 
 use crate::Error;
-use crate::ListItem;
 use crate::Result;
 use crate::View;
 use crate::ViewComment;
@@ -30,7 +27,8 @@ pub fn parse(url: &str, data: &str) -> Result<View> {
             Error::ParseString(format!("Failed to parse ID from download link: {}", id))
         })?
         .replace(".torrent", "");
-    let id = id.parse::<usize>()
+    let id = id
+        .parse::<usize>()
         .map_err(|_| Error::ParseInteger(id.clone()))?;
 
     let title_selector = Selector::parse(".panel-title").unwrap();
@@ -57,7 +55,6 @@ pub fn parse(url: &str, data: &str) -> Result<View> {
     let downloads = parse_number(&document, "Completed:")?;
 
     let submitter = parse_string(&document, "Submitter:")?;
-    let info_link = parse_string(&document, "Information:").ok();
     let info_hash = parse_string(&document, "Info Hash:")?;
 
     let category_selector = Selector::parse(".col-md-5 a[href^='/?c=']").unwrap();

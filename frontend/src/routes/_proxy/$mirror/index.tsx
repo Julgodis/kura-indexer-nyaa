@@ -29,7 +29,7 @@ import { listQueryOptions, mirrorQueryOptions } from '@/lib/query'
 
 export const Route = createFileRoute('/_proxy/$mirror/')({
   component: RouteComponent,
-  parseParams: MirrorRouteParamsSchema.parse,
+  parseParams: (params) => MirrorRouteParamsSchema.parse(params),
   validateSearch: zodValidator(ListRequestSchema),
   loaderDeps: ({ search }) => ({ search }),
   loader: async ({ deps: { search }, params }) => {
@@ -118,13 +118,13 @@ function ItemRow({ mirror, item }: { mirror: Mirror, item: ListItem }) {
       return;
     }
 
-    let magnet_link = undefined;
+    let magnet_link = `unknown`;
     try {
-      const json_data = await response.json();
-      const data = MagnetResponseSchema.parse(json_data);
+      const data = MagnetResponseSchema.parse(await response.json());
       magnet_link = data.magnet_link;
     } catch (error) {
-      toast.error('Failed to copy magnet link', { description: `${error}` });
+      const error_message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error('Failed to copy magnet link', { description: error_message });
       setMagnetLoading(false);
       return;
     }
@@ -132,7 +132,7 @@ function ItemRow({ mirror, item }: { mirror: Mirror, item: ListItem }) {
     try {
       await navigator.clipboard.writeText(magnet_link);
       toast.success('Magnet link copied to clipboard', {
-        description: `${magnet_link}`,
+        description: magnet_link,
       });
     } catch {
       toast.error('Clipboard access denied', {
