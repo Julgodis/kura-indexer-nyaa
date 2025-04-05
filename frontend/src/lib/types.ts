@@ -176,6 +176,45 @@ export type ListItem = z.infer<typeof ListItemSchema>;
 export type ListRequest = z.infer<typeof ListRequestSchema>;
 export type ListResponse = z.infer<typeof ListResponseSchema>;
 
+
+export const ViewCommentSchema = z.object({
+    id: z.number().int().nonnegative(),
+    user: z.string(),
+    date: z.string().datetime(),
+    edited_date: z.string().datetime().nullable().optional(),
+    content: z.string(),
+    avatar: z.string().nullable().optional(),
+});
+
+export type ViewComment = z.infer<typeof ViewCommentSchema>;
+
+export const ViewFileSchema = z.object({
+    id: z.number().int().nonnegative(),
+    name: z.string(),
+    size: z.number().int().nonnegative(),
+});
+
+export type ViewFile = z.infer<typeof ViewFileSchema>;
+
+export const ViewResponseSchema = z.object({
+    id: z.number().int().nonnegative(),
+    title: z.string(),
+    pub_date: z.string().datetime(),
+    description_md: z.string(),
+    category: z.string(),
+    size: z.number().int().nonnegative(),
+    seeders: z.number().int().nonnegative(),
+    leechers: z.number().int().nonnegative(),
+    downloads: z.number().int().nonnegative(),
+    trusted: z.boolean(),
+    remake: z.boolean(),
+    magnet_link: z.string().nullable().optional(),
+    comments: z.array(ViewCommentSchema),
+    files: z.array(ViewFileSchema),
+});
+
+export type ViewResponse = z.infer<typeof ViewResponseSchema>;
+
 export const MirrorSchema = z.object({
     id: z.string(),
     name: z.string(),
@@ -204,7 +243,7 @@ export const MirrorRouteParamsSchema = z.object({
 
 export const MirrorViewRouteParamsSchema = z.object({
     mirror: z.string(),
-    id: z.number().int().nonnegative(),
+    id: z.coerce.number().int().nonnegative(),
 });
 
 export const MirrorHealthResponseSchema = z.object({
@@ -215,4 +254,3 @@ export const MirrorHealthResponseSchema = z.object({
         requests: z.array(z.tuple([z.string().datetime(), z.string(), z.boolean(), z.boolean(), z.number()])),
     })
 )});
-

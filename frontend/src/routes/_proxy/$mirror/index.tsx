@@ -1,4 +1,4 @@
-import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
+import { createFileRoute, stripSearchParams, useLoaderData } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Suspense, useState } from 'react'
 import { zodValidator } from '@tanstack/zod-adapter'
@@ -25,7 +25,7 @@ import { Footer } from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ApiUrl } from '@/lib/url'
-import { listQueryOptions, mirrorQueryOptions } from '@/lib/query'
+import { listQueryOptions } from '@/lib/query'
 
 export const Route = createFileRoute('/_proxy/$mirror/')({
   component: RouteComponent,
@@ -312,8 +312,8 @@ function RouteComponent() {
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
   const { mirror: mirror_id } = Route.useParams();
-  const { data: { items: mirrors } } = useSuspenseQuery(mirrorQueryOptions)
-  const mirror = mirrors.find((item) => item.id === mirror_id);
+  const data = useLoaderData({ from: '/_proxy' });
+  const mirror = data.items.find((item) => item.id === mirror_id);
   if (!mirror) {
     navigate({ to: '/', replace: true });
     return null;
@@ -327,7 +327,7 @@ function RouteComponent() {
 
   return (
     <div className="mx-auto container">
-      <Header />
+      <Header mirror_id={mirror_id} search={search} />
       <main className="container mx-auto">
         <div className="container mx-auto py-2">
           <Suspense fallback={<div>Loading...</div>}>

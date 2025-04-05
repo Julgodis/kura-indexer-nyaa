@@ -116,28 +116,33 @@ fn parse_boolean(value: &str) -> Result<bool> {
 }
 
 fn parse_size(value: &str) -> Result<u64> {
-    let value = value.trim();
-    let (num_str, unit) = if let Some(x) = value.strip_suffix(" B") {
+    let value = value.trim().to_ascii_lowercase();
+    if value.is_empty() {
+        return Ok(0);
+    }
+    let (num_str, unit) = if let Some(x) = value.strip_suffix(" b") {
         (x, 1u64)
-    } else if let Some(x) = value.strip_suffix(" KB") {
+    } else if let Some(x) = value.strip_suffix(" bytes") {
+        (x, 1u64)
+    } else if let Some(x) = value.strip_suffix(" kn") {
         (x, 1000u64)
-    } else if let Some(x) = value.strip_suffix(" MB") {
+    } else if let Some(x) = value.strip_suffix(" mb") {
         (x, 1000u64 * 1000u64)
-    } else if let Some(x) = value.strip_suffix(" GB") {
+    } else if let Some(x) = value.strip_suffix(" gb") {
         (x, 1000u64 * 1000u64 * 1000u64)
-    } else if let Some(x) = value.strip_suffix(" TB") {
+    } else if let Some(x) = value.strip_suffix(" tb") {
         (x, 1000u64 * 1000u64 * 1000u64 * 1000u64)
-    } else if let Some(x) = value.strip_suffix(" PB") {
+    } else if let Some(x) = value.strip_suffix(" pb") {
         (x, 1000u64 * 1000u64 * 1000u64 * 1000u64 * 1000u64)
-    } else if let Some(x) = value.strip_suffix(" KiB") {
+    } else if let Some(x) = value.strip_suffix(" kib") {
         (x, 1024u64)
-    } else if let Some(x) = value.strip_suffix(" MiB") {
+    } else if let Some(x) = value.strip_suffix(" mib") {
         (x, 1024u64 * 1024u64)
-    } else if let Some(x) = value.strip_suffix(" GiB") {
+    } else if let Some(x) = value.strip_suffix(" gib") {
         (x, 1024u64 * 1024u64 * 1024u64)
-    } else if let Some(x) = value.strip_suffix(" TiB") {
+    } else if let Some(x) = value.strip_suffix(" tib") {
         (x, 1024u64 * 1024u64 * 1024u64 * 1024u64)
-    } else if let Some(x) = value.strip_suffix(" PiB") {
+    } else if let Some(x) = value.strip_suffix(" pib") {
         (x, 1024u64 * 1024u64 * 1024u64 * 1024u64 * 1024u64)
     } else {
         return Err(Error::ParseSize(value.to_string(), None));

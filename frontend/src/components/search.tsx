@@ -1,33 +1,42 @@
-import { listCategories, ListCategory, listCategoryOrder, ListFilter, ListFilterSchema, listFilterValueToLabel } from "@/lib/types";
+import { listCategories, ListCategory, listCategoryOrder, ListFilter, ListFilterSchema, listFilterValueToLabel, ListRequest } from "@/lib/types";
 import { useState } from "react";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Button } from "./ui/button";
-import { Route } from "@/routes/_proxy/$mirror";
 import { Separator } from "./ui/separator";
+import { useNavigate } from "@tanstack/react-router";
 
-export function Search() {
-    const navigate = Route.useNavigate();
-    const search = Route.useSearch();
+export function Search({
+    mirror_id,
+    search
+}: {
+    mirror_id: string;
+    search: ListRequest;
+}) {
+    const navigate = useNavigate();
     const [searchInput, setSearchInput] = useState(search.q || '');
     const [filter, setFilter] = useState(search.f);
     const [category, setCategory] = useState(search.c);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
-        navigate({ search: { ...search, q: searchInput } })
+        navigate({
+            to: '/$mirror',
+            search: { ...search, q: searchInput },
+            params: { mirror: mirror_id }
+        })
     }
 
     const onFilterChange = (value: string) => {
         const newFilter = value as ListFilter
         setFilter(newFilter)
-        navigate({ search: { ...search, q: searchInput, f: newFilter } })
+        navigate({ to: '/$mirror', search: { ...search, q: searchInput, f: newFilter }, params: { mirror: mirror_id } })
     }
 
     const onCategoryChange = (value: string) => {
         const newCategory = value as ListCategory
         setCategory(newCategory)
-        navigate({ search: { ...search, q: searchInput, c: newCategory } })
+        navigate({ to: '/$mirror', search: { ...search, q: searchInput, c: newCategory }, params: { mirror: mirror_id } })
     }
 
     const categoryElements = [];

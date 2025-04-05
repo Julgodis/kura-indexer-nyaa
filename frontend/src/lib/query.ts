@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query"
-import { ListRequest, ListResponseSchema, MirrorHealthResponseSchema, MirrorResponseSchema } from "./types"
+import { ListRequest, ListResponseSchema, MirrorHealthResponseSchema, MirrorResponseSchema, ViewResponseSchema } from "./types"
 import { ApiUrl } from "./url"
 
 export const mirrorQueryOptions = queryOptions({
@@ -25,6 +25,16 @@ export const listQueryOptions = (mirror: string, search: ListRequest) => {
 
             const response = await fetch(`${ApiUrl}/api/mirror/${mirror}/list?${searchParams.toString()}`)
             return ListResponseSchema.parse(await response.json())
+        }
+    })
+}
+
+export const viewQueryOptions = (mirror: string, id: number) => {
+    return queryOptions({
+        queryKey: ['view', mirror, id],
+        queryFn: async () => {
+            const response = await fetch(`${ApiUrl}/api/mirror/${mirror}/view/${id}`)
+            return ViewResponseSchema.parse(await response.json())
         }
     })
 }
