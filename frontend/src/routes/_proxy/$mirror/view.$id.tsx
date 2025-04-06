@@ -38,7 +38,7 @@ const markdownComponents = {
   p: ({ children }: any) => <p className="my-2">{children}</p>,
   strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
   em: ({ children }: any) => <em className="italic">{children}</em>,
-  a: ({ children, href }: any) => <a href={href}>{children}</a>,
+  a: ({ children, href }: any) => <a href={href} className="text-blue-500 hover:underline">{children}</a>,
   img: ({ src, alt }: any) => <img src={src} alt={alt} className="max-w-full h-auto" />,
   blockquote: ({ children }: any) => <blockquote className="border-l-4 pl-4 italic">{children}</blockquote>,
   ul: ({ children }: any) => <ul className="list-disc pl-5">{children}</ul>,
