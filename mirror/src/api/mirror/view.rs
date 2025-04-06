@@ -42,8 +42,6 @@ pub async fn handler(
     Extension(mext): Extension<MirrorExt>,
     Path((mirror_id, item_id)): Path<(String, String)>,
 ) -> impl IntoResponse {
-    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-
     let Some(mirror) = mext.find_by_id(&mirror_id) else {
         tracing::error!("mirror not found");
         return (
