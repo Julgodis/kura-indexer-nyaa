@@ -3,16 +3,16 @@ WORKDIR /usr/src/app
 
 FROM frontend-base AS frontend-install
 RUN mkdir -p /temp/dev
-COPY mirror/frontend/package.json mirror/frontend/bun.lock /temp/dev/
+COPY frontend/package.json frontend/bun.lock /temp/dev/
 RUN cd /temp/dev && bun install --frozen-lockfile
 
 RUN mkdir -p /temp/prod
-COPY mirror/frontend/package.json mirror/frontend/bun.lock /temp/prod/
+COPY frontend/package.json frontend/bun.lock /temp/prod/
 RUN cd /temp/prod && bun install --frozen-lockfile --production
 
 FROM frontend-base AS frontend-build
 COPY --from=frontend-install /temp/dev/node_modules node_modules
-COPY mirror/frontend/ .
+COPY frontend/ .
 
 ENV NODE_ENV=production
 ENV VITE_API_URL=/
@@ -45,6 +45,5 @@ RUN apt-get update && apt-get install -y \
 FROM base AS final
 COPY --from=backend-build /usr/src/app/target/release/nyaa-mirror nyaa-mirror
 COPY --from=frontend-build /usr/src/app/dist /dist
-
 
 ENTRYPOINT ["/usr/src/app/nyaa-mirror", "--config", "/config/nyaa-mirror.toml"]
