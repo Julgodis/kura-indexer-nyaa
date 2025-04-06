@@ -13,7 +13,9 @@ export const mirrorQueryOptions = queryOptions({
 export const listQueryOptions = (mirror: string, search: ListRequest) => {
     return queryOptions({
         queryKey: ['list', mirror, search.p, search.c, search.s, search.o, search.f, search.q],
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 60 * 5,
+        retry: 3,
+        retryDelay: 2000,
         queryFn: async () => {
             const searchParams = new URLSearchParams()
             if (search.p) searchParams.append('p', search.p.toString())
@@ -32,6 +34,9 @@ export const listQueryOptions = (mirror: string, search: ListRequest) => {
 export const viewQueryOptions = (mirror: string, id: number) => {
     return queryOptions({
         queryKey: ['view', mirror, id],
+        staleTime: 1000 * 60 * 30,
+        retry: 3,
+        retryDelay: 2000,
         queryFn: async () => {
             const response = await fetch(`${ApiUrl}/api/mirror/${mirror}/view/${id}`)
             return ViewResponseSchema.parse(await response.json())
@@ -41,6 +46,8 @@ export const viewQueryOptions = (mirror: string, id: number) => {
 
 export const healthQueryOptions = queryOptions({
     queryKey: ['health'],
+    retry: 3,
+    retryDelay: 2000,
     queryFn: async () => {
         const response = await fetch(`${ApiUrl}/api/health`)
         return MirrorHealthResponseSchema.parse(await response.json())

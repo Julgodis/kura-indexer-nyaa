@@ -6,45 +6,43 @@ import { viewQueryOptions } from '@/lib/query'
 import { ListRequestSchema, MirrorViewRouteParamsSchema, ViewComment, ViewFile, ViewResponse } from '@/lib/types'
 import { queryClient } from '@/main'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { createFileRoute, ErrorComponentProps } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
-import { Suspense } from 'react'
-import Markdown from "react-markdown"
+import { createFileRoute, ErrorComponentProps, useLoaderData, useNavigate } from '@tanstack/react-router'
+import Markdown, { Components } from "react-markdown"
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export const Route = createFileRoute('/_proxy/$mirror/view/$id')({
   component: RouteComponent,
   parseParams: (params) => MirrorViewRouteParamsSchema.parse(params),
   pendingComponent: PendingComponent,
   errorComponent: ErrorComponent,
-  notFoundComponent: NotFoundComponent,
   loader: async ({ params }) => {
     const query = viewQueryOptions(params.mirror, params.id)
     return await queryClient.ensureQueryData(query)
   },
 })
 
-const markdownComponents = {
-  h3: ({ children }: any) => <h3 className="text-lg font-semibold">{children}</h3>,
-  table: ({ children }: any) => <Table>{children}</Table>,
-  th: ({ children }: any) => <TableHead>{children}</TableHead>,
-  thead: ({ children }: any) => <TableHeader>{children}</TableHeader>,
-  tbody: ({ children }: any) => <TableBody>{children}</TableBody>,
-  td: ({ children }: any) => <TableCell>{children}</TableCell>,
-  tr: ({ children }: any) => <TableRow>{children}</TableRow>,
+const markdownComponents: Components = {
+  h3: (x) => <h3 className="text-lg font-semibold">{x.children}</h3>,
+  table: (x) => <Table>{x.children}</Table>,
+  th: (x) => <TableHead>{x.children}</TableHead>,
+  thead: (x) => <TableHeader>{x.children}</TableHeader>,
+  tbody: (x) => <TableBody>{x.children}</TableBody>,
+  td: (x) => <TableCell>{x.children}</TableCell>,
+  tr: (x) => <TableRow>{x.children}</TableRow>,
   br: () => <br />,
-  p: ({ children }: any) => <p className="my-2">{children}</p>,
-  strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
-  em: ({ children }: any) => <em className="italic">{children}</em>,
-  a: ({ children, href }: any) => <a href={href} className="text-blue-500 hover:underline">{children}</a>,
-  img: ({ src, alt }: any) => <img src={src} alt={alt} className="max-w-full h-auto" />,
-  blockquote: ({ children }: any) => <blockquote className="border-l-4 pl-4 italic">{children}</blockquote>,
-  ul: ({ children }: any) => <ul className="list-disc pl-5">{children}</ul>,
-  ol: ({ children }: any) => <ol className="list-decimal pl-5">{children}</ol>,
-  li: ({ children }: any) => <li className="my-1">{children}</li>,
-  code: ({ children }: any) => <code className="p-1 rounded">{children}</code>,
+  p: (x) => <p className="my-2">{x.children}</p>,
+  strong: (x) => <strong className="font-semibold">{x.children}</strong>,
+  em: (x) => <em className="italic">{x.children}</em>,
+  a: (x) => <a href={x.href} className="text-blue-500 hover:underline">{x.children}</a>,
+  img: (x) => <img src={x.src} alt={x.alt} className="max-w-full h-auto" />,
+  blockquote: (x) => <blockquote className="border-l-4 pl-4 italic">{x.children}</blockquote>,
+  ul: (x) => <ul className="list-disc pl-5">{x.children}</ul>,
+  ol: (x) => <ol className="list-decimal pl-5">{x.children}</ol>,
+  li: (x) => <li className="my-1">{x.children}</li>,
+  code: (x) => <code className="p-1 rounded">{x.children}</code>,
 }
 
 function InfoCard({ view }: { view: ViewResponse }) {
@@ -165,25 +163,23 @@ function RouteComponent() {
       <Header mirror_id={mirror_id} search={search} />
       <main className="container mx-auto">
         <div className="container mx-auto py-2">
-          <Suspense fallback={<div>Loading...</div>}>
-            <InfoCard view={view} />
-            <Tabs defaultValue="description" className="w-full">
-              <TabsList>
-                <TabsTrigger value="description">Description</TabsTrigger>
-                <TabsTrigger value="comments">Comments</TabsTrigger>
-                <TabsTrigger value="files">Files</TabsTrigger>
-              </TabsList>
-              <TabsContent value="description">
-                <Description description_md={view.description_md} />
-              </TabsContent>
-              <TabsContent value="comments">
-                <Comments comments={view.comments} />
-              </TabsContent>
-              <TabsContent value="files">
-                <Files files={view.files} />
-              </TabsContent>
-            </Tabs>
-          </Suspense>
+          <InfoCard view={view} />
+          <Tabs defaultValue="description" className="w-full">
+            <TabsList>
+              <TabsTrigger value="description">Description</TabsTrigger>
+              <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="files">Files</TabsTrigger>
+            </TabsList>
+            <TabsContent value="description">
+              <Description description_md={view.description_md} />
+            </TabsContent>
+            <TabsContent value="comments">
+              <Comments comments={view.comments} />
+            </TabsContent>
+            <TabsContent value="files">
+              <Files files={view.files} />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
       <Footer />
@@ -193,19 +189,52 @@ function RouteComponent() {
 
 
 function PendingComponent() {
-  return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin" /></div>
-}
+  const navigate = useNavigate();
+  const search = ListRequestSchema.parse({});
+  const { mirror: mirror_id } = Route.useParams();
+  const data = useLoaderData({ from: '/_proxy' });
+  const mirror = data.items.find((item) => item.id === mirror_id);
+  if (!mirror) {
+    navigate({ to: '/', replace: true });
+    return null;
+  }
 
-function ErrorComponent({ error }: ErrorComponentProps) {
   return (
-    <ErrorCard error={error} title="An error occurred while loading the sites" onRetry={() => { window.location.reload() }} />
+    <div className="mx-auto container">
+      <Header mirror_id={mirror_id} search={search} />
+      <main className="container mx-auto">
+        <div className="container mx-auto py-2">
+          <Skeleton className="h-8 w-1/2 mb-4" />
+          <Skeleton className="h-4 w-full mb-2" />
+          <Skeleton className="h-4 w-full mb-2" />
+          <Skeleton className="h-4 w-full mb-2" />
+        </div>
+      </main>
+      <Footer />
+    </div>
   )
 }
 
-function NotFoundComponent() {
+function ErrorComponent({ error }: ErrorComponentProps) {
+  const navigate = useNavigate();
+  const search = ListRequestSchema.parse({});
+  const { mirror: mirror_id } = Route.useParams();
+  const data = useLoaderData({ from: '/_proxy' });
+  const mirror = data.items.find((item) => item.id === mirror_id);
+  if (!mirror) {
+    navigate({ to: '/', replace: true });
+    return null;
+  }
+
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="text-red-500">404 Not Found</div>
+    <div className="mx-auto container">
+      <Header mirror_id={mirror_id} search={search} />
+      <main className="container mx-auto">
+        <div className="container mx-auto py-2">
+          <ErrorCard error={error} title="An error occurred while loading the sites" onRetry={() => { window.location.reload() }} />
+        </div>
+      </main>
+      <Footer />
     </div>
   )
 }

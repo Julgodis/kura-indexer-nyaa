@@ -1,4 +1,4 @@
-import { createFileRoute, stripSearchParams, useLoaderData } from '@tanstack/react-router'
+import { createFileRoute, ErrorComponentProps, stripSearchParams, useLoaderData } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Suspense, useState } from 'react'
 import { zodValidator } from '@tanstack/zod-adapter'
@@ -26,9 +26,13 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ApiUrl } from '@/lib/url'
 import { listQueryOptions } from '@/lib/query'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorCard } from '@/components/error'
 
 export const Route = createFileRoute('/_proxy/$mirror/')({
   component: RouteComponent,
+  pendingComponent: PendingComponent,
+  errorComponent: ErrorComponent,
   parseParams: (params) => MirrorRouteParamsSchema.parse(params),
   validateSearch: zodValidator(ListRequestSchema),
   loaderDeps: ({ search }) => ({ search }),
@@ -57,11 +61,11 @@ function SortableHeader({
   sort_name: ListSortBy;
   children: React.ReactNode;
   className?: string;
-  search: ListRequest;
+  search?: ListRequest;
 }) {
   const navigate = Route.useNavigate();
   const params = Route.useParams();
-  const { s: sort_by, o: sort_order } = search;
+  const { s: sort_by, o: sort_order } = search ?? {};
 
   const isActive = sort_by === sort_name;
   const isAsc = isActive && sort_order === 'asc';
@@ -338,6 +342,116 @@ function RouteComponent() {
               pageCount={pageCount}
             />
           </Suspense>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  )
+}
+
+function ItemsTableSkeleton() {
+  return (
+    <Table style={{ tableLayout: 'fixed' }}>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[80px]">Category</TableHead>
+          <TableHead className="truncate">Title</TableHead>
+          <SortableHeader sort_name="size" className="w-[100px] text-right">Size</SortableHeader>
+          <SortableHeader sort_name="id" className="w-[100px] text-center">Date</SortableHeader>
+          <SortableHeader sort_name="seeders" className="w-[50px] text-center">S</SortableHeader>
+          <SortableHeader sort_name="leechers" className="w-[50px] text-center">L</SortableHeader>
+          <SortableHeader sort_name="downloads" className="w-[50px] text-center">D</SortableHeader>
+          <SortableHeader sort_name="comments" className="w-[30px] text-center">C</SortableHeader>
+          <TableHead className="w-[80px] text-center">Link</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {Array.from({ length: 10 }, (_, index) => (
+          <TableRow key={index}>
+            <TableCell>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+            <TableCell >
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+function TablePaginationSkeleton() {
+  return (
+    <div className="flex justify-center mt-6">
+      <Skeleton className="h-8 w-32" />
+    </div>
+  )
+}
+
+function PendingComponent() {
+  const navigate = Route.useNavigate();
+  const search = Route.useSearch();
+  const { mirror: mirror_id } = Route.useParams();
+  const data = useLoaderData({ from: '/_proxy' });
+  const mirror = data.items.find((item) => item.id === mirror_id);
+  if (!mirror) {
+    navigate({ to: '/', replace: true });
+    return null;
+  }
+
+  return (
+    <div className="mx-auto container">
+      <Header mirror_id={mirror_id} search={search} />
+      <main className="container mx-auto">
+        <div className="container mx-auto py-2">
+          <ItemsTableSkeleton />
+          <TablePaginationSkeleton />
+        </div>
+      </main>
+      <Footer />
+    </div>
+  )
+}
+
+function ErrorComponent({ error }: ErrorComponentProps) {
+  const navigate = Route.useNavigate();
+  const search = Route.useSearch();
+  const { mirror: mirror_id } = Route.useParams();
+  const data = useLoaderData({ from: '/_proxy' });
+  const mirror = data.items.find((item) => item.id === mirror_id);
+  if (!mirror) {
+    navigate({ to: '/', replace: true });
+    return null;
+  }
+
+  return (
+    <div className="mx-auto container">
+      <Header mirror_id={mirror_id} search={search} />
+      <main className="container mx-auto">
+        <div className="container mx-auto py-2">
+          <ErrorCard error={error} title="An error occurred while loading the sites" onRetry={() => { window.location.reload() }} />
         </div>
       </main>
       <Footer />

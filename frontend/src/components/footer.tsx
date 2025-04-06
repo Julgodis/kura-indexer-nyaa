@@ -6,3 +6,10 @@ export function Footer() {
         </footer>
     );
 }
+
+export function FooterSkeleton() {
+    return (
+        <footer>
+        </footer>
+    );
+}
